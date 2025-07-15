@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth0/nextjs-auth0": "^4.8.0",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
@@ -30,8 +31,7 @@
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.5",
     "swiper": "^11.2.0",
-    "tailwind-merge": "^2.6.0",
-    "@auth0/nextjs-auth0": "^4.8.0"
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
