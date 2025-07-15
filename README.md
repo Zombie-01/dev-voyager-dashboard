@@ -64,6 +64,59 @@ git clone https://github.com/TailAdmin/free-nextjs-admin-dashboard.git
     yarn dev
     ```
 
+## Auth0 Integration
+
+To enable authentication with Auth0, follow these steps:
+
+1. Install the Auth0 Next.js SDK:
+
+    ```bash
+    npm install @auth0/nextjs-auth0
+    ```
+
+2. Create a `.env.local` file in the project root and add the following variables:
+
+    ```bash
+    AUTH0_SECRET=YOUR_AUTH0_SECRET
+    AUTH0_BASE_URL=http://localhost:3000
+    AUTH0_ISSUER_BASE_URL=https://YOUR_AUTH0_DOMAIN
+    AUTH0_CLIENT_ID=YOUR_AUTH0_CLIENT_ID
+    AUTH0_CLIENT_SECRET=YOUR_AUTH0_CLIENT_SECRET
+    ```
+
+3. An API route has been added at `src/app/api/auth/[...auth0]/route.ts` to handle Auth0 authentication flows.
+
+4. The application is wrapped with the Auth0 `UserProvider` in `src/app/layout.tsx` for session management.
+
+5. Use the endpoints `/api/auth/login` and `/api/auth/logout` to trigger login and logout flows.
+
+6. Add authentication middleware to protect pages:
+
+    - Create `src/lib/auth0.ts`:
+      ```ts
+      import { Auth0Client } from '@auth0/nextjs-auth0/server';
+      export const auth0 = new Auth0Client();
+      ```
+
+    - Create `src/middleware.ts`:
+      ```ts
+      import type { NextRequest } from 'next/server';
+      import { NextResponse } from 'next/server';
+      import { auth0 } from './lib/auth0';
+
+      export async function middleware(request: NextRequest) {
+        return auth0.middleware(request);
+      }
+
+      export const config = {
+        matcher: [
+          '/((?!api/auth|signin|_next/static|_next/image|favicon.ico).*)',
+        ],
+      };
+      ```
+
+    This middleware will redirect unauthenticated users to the Auth0 universal-login page when accessing protected routes.
+
 ## Components
 
 TailAdmin is a pre-designed starting point for building a web-based dashboard using Next.js and Tailwind CSS. The template includes:
