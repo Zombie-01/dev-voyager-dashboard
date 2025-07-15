@@ -29,14 +29,19 @@ type NavItem = {
 const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    name: "Нүүр",
+    path: "/",
   },
   {
     icon: <CalenderIcon />,
-    name: "Calendar",
+    name: "Спонор календар",
     path: "/calendar",
   },
+
+  // sponsor list
+  // user list
+  // media profile
+  // question list
   {
     icon: <UserCircleIcon />,
     name: "User Profile",
@@ -311,13 +316,18 @@ const AppSidebar: React.FC = () => {
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              <Image
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Image
+                  className="dark:hidden"
+                  src="/images/logo/logo.png"
+                  alt="Logo"
+                  width={40}
+                  height={40}
+                />
+                <span className="ml-2 text-lg font-semibold">
+                  Voyager Widget Admin
+                </span>
+              </div>
               <Image
                 className="hidden dark:block"
                 src="/images/logo/logo-dark.svg"
