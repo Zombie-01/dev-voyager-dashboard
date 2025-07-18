@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
   BoxCubeIcon,
+  BoxIcon,
   CalenderIcon,
   ChevronDownIcon,
+  DollarLineIcon,
   GridIcon,
   HorizontaLDots,
   ListIcon,
@@ -17,6 +19,7 @@ import {
   TableIcon,
   UserCircleIcon,
 } from "../icons/index";
+import LineChartOne from "@/components/charts/line/LineChartOne";
 // import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
@@ -47,6 +50,22 @@ const navItems: NavItem[] = [
     name: "User Profile",
     path: "/profile",
   },
+    {
+    icon: <UserCircleIcon />,
+    name: "Users",
+    path: "/users",
+  },
+  {
+    icon: <DollarLineIcon />,
+    name: "Sponsors",
+    path: "/sponsors",
+  },
+   {
+    icon: <BoxIcon />,
+    name: "Users conversations",
+    path: "/user-conversations",
+  },
+
 
   {
     name: "Forms",
