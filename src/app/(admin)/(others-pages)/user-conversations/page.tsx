@@ -2,7 +2,14 @@
 
 import ComponentCard from "@/components/common/ComponentCard";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import Pagination from "@/components/tables/Pagination";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getAccessToken } from "@auth0/nextjs-auth0";
 import { useEffect, useState } from "react";
 
@@ -11,6 +18,7 @@ export default function ConversationsTable() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
 
   const perPage = 10;
 
@@ -27,20 +35,21 @@ export default function ConversationsTable() {
         }
       );
       const data = await res.json();
-// Map the 'sessions' data to fit your 'conversations' state structure
-      setConversations(data.sessions.map((session: any) => ({
-        id: session.session_id,
-        user: {
-          name: session.preview_messages[0]?.user_id || "Unknown User", // Assuming first message user_id as user identifier
-          email: "N/A" // Email is not directly available in the provided JSON for the user object at session level
-        },
-        last_message: session.preview_messages[session.preview_messages.length - 1]?.content || "No messages",
-        updated_at: session.end_timestamp,
-      })) || []);
-
-      setTotalPages(Math.ceil(data.total_sessions_est / perPage) || 1)
+      setConversations(
+        data.sessions.map((session: any) => ({
+          id: session.session_id,
+          user: {
+            name: session.preview_messages[0]?.user_id || "Тодорхойгүй",
+            email: "N/A",
+          },
+          last_message:
+            session.preview_messages[session.preview_messages.length - 1]?.content || "Мессеж алга",
+          updated_at: session.end_timestamp,
+        })) || []
+      );
+      setTotalPages(Math.ceil(data.total_sessions_est / perPage) || 1);
     } catch (err) {
-      console.error("Failed to fetch conversations:", err);
+      console.error("Харилцан яриа татахад алдаа гарлаа:", err);
     } finally {
       setLoading(false);
     }
@@ -50,87 +59,112 @@ export default function ConversationsTable() {
     fetchConversations(page);
   }, [page]);
 
-  const goPrev = () => setPage((p) => Math.max(p - 1, 1));
-  const goNext = () => setPage((p) => Math.min(p + 1, totalPages));
-
   return (
     <div>
-      <PageBreadcrumb pageTitle="User Conversations" />
+      <PageBreadcrumb pageTitle="Хэрэглэгчийн Харилцан Яриа" />
 
       <div className="space-y-6">
-        <ComponentCard title="User Conversations">
-          {loading && <p className="mb-4 text-center text-gray-500">Loading...</p>}
+        <ComponentCard title="Хэрэглэгчийн Харилцан Яриа">
+        
 
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
-              <div className="min-w-[600px]">
+              <div className="min-w-[600px]">   {loading ? 
+              <div className="flex justify-center items-center py-12">
+              <svg
+                className="animate-spin h-8 w-8 text-blue-500 dark:text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+            </div>
+          : 
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableCell isHeader>User Name</TableCell>
-                      <TableCell isHeader>Email</TableCell>
-                      <TableCell isHeader>Last Message</TableCell>
-                      <TableCell isHeader>Last Updated</TableCell>
+                    <TableRow className="dark:text-white">
+                      <TableCell isHeader>Нэр</TableCell>
+                      <TableCell isHeader>Имэйл</TableCell>
+                      <TableCell isHeader>Сүүлчийн мессеж</TableCell>
+                      <TableCell isHeader>Шинэчилсэн огноо</TableCell>
                     </TableRow>
                   </TableHeader>
 
                   <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                     {conversations.length === 0 && !loading && (
-                      <TableRow>
-                        <TableCell className="text-center py-4 text-gray-500 dark:text-gray-400">
-                          No conversations found.
+                      <TableRow className="">
+                        <TableCell
+                          colSpan={4}
+                          className="text-center py-4 text-gray-500 dark:text-gray-400"
+                        >
+                          Харилцан яриа олдсонгүй.
                         </TableCell>
                       </TableRow>
                     )}
 
                     {conversations.map((conv) => (
-                      <TableRow key={conv.id}>
-                        <TableCell className="px-5 py-4 sm:px-6 text-start">
-                          {conv.user?.name || "N/A"}
+                      <TableRow key={conv.id} className=" dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">
+                        <TableCell className="px-5 py-4 text-start">{conv.user.name}</TableCell>
+                        <TableCell className="px-4 py-3 text-start text-sm text-gray-500 dark:text-gray-400">
+                          {conv.user.email}
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-gray-500 text-start text-sm dark:text-gray-400">
-                          {conv.user?.email || "N/A"}
+                        <TableCell
+                          onClick={() => setSelectedMessage(conv.last_message)}
+                          className="cursor-pointer px-4 py-3 text-start text-sm text-gray-700 dark:text-gray-200 max-w-xs truncate"
+                        >
+                          {conv.last_message}
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-gray-500 text-start text-sm dark:text-gray-400 truncate max-w-xs">
-                          {conv.last_message || "No messages"}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-gray-500 text-start text-sm dark:text-gray-400">
+                        <TableCell className="px-4 py-3 text-start text-sm text-gray-500 dark:text-gray-400">
                           {conv.updated_at
-                            ? new Date(conv.updated_at).toLocaleString()
+                            ? new Date(conv.updated_at).toLocaleString("mn-MN")
                             : "N/A"}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+            }
               </div>
             </div>
           </div>
 
-          {/* Pagination controls */}
-          <div className="mt-4 flex items-center justify-between space-x-2">
-            <button
-              onClick={goPrev}
-              disabled={page === 1 || loading}
-              className="rounded border border-gray-300 bg-white px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700"
-            >
-              Previous
-            </button>
-
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              Page {page} of {totalPages}
-            </span>
-
-            <button
-              onClick={goNext}
-              disabled={page === totalPages || loading}
-              className="rounded border border-gray-300 bg-white px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700"
-            >
-              Next
-            </button>
+          {/* Хуудаслалт */}
+          <div className="mt-4 flex justify-end">
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
         </ComponentCard>
       </div>
+
+      {/* Modal - Tailwind only */}
+      {selectedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-xl max-h-[70vh] overflow-y-auto w-full">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Мессеж дэлгэрэнгүй</h2>
+            <p className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{selectedMessage}</p>
+            <div className="mt-4 text-right">
+              <button
+                onClick={() => setSelectedMessage(null)}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              >
+                Хаах
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
