@@ -85,10 +85,10 @@ export default function BasicTables() {
           </div>
 
           {/* Per Page + Export */}
-          <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+          <div className="flex dark:text-white flex-wrap justify-between items-center gap-4 mb-4">
             {/* Per Page Dropdown */}
             <div>
-              <label className="text-sm mr-2 text-gray-600 dark:text-gray-300">Хуудаслалт:</label>
+              <label className="text-sm mr-2 text-gray-600 dark:text-gray-200">Хуудаслалт:</label>
               <select
                 value={perPage}
                 onChange={(e) => {
