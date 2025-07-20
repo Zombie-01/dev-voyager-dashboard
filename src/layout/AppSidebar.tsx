@@ -318,23 +318,17 @@ const AppSidebar: React.FC = () => {
             <>
               <div style={{ display: "flex", alignItems: "center" }}>
                 <Image
-                  className="dark:hidden"
+                  className=""
                   src="/images/logo/logo.png"
                   alt="Logo"
                   width={40}
                   height={40}
                 />
-                <span className="ml-2 text-lg font-semibold">
+                <span className="ml-2 text-lg font-semibold dark:text-white">
                   Voyager Widget Admin
                 </span>
               </div>
-              <Image
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
+             
             </>
           ) : (
             <Image
