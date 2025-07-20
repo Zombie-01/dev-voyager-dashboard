@@ -128,7 +128,7 @@ const AppHeader: React.FC = () => {
                 {user.name}
               </span>
               <Link
-                href="/api/auth/logout"
+                href="/auth/logout"
                 className="ml-2 text-sm text-red-500 hover:underline"
               >
                 Logout
@@ -136,7 +136,7 @@ const AppHeader: React.FC = () => {
             </div>
           ) : (
             <Link
-              href="/api/auth/login"
+              href="/auth/login"
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
               Sign in
