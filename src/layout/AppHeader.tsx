@@ -114,7 +114,10 @@ const AppHeader: React.FC = () => {
 
           {/* User Auth Info */}
           {isLoading ? (
-            <span className="text-gray-500">Loading...</span>
+            <div className="flex items-center gap-2 animate-pulse">
+              <div className="w-8 h-8 bg-gray-300 rounded-full dark:bg-gray-700" />
+              <div className="w-20 h-4 bg-gray-300 rounded dark:bg-gray-700" />
+            </div>
           ) : user ? (
             <div className="flex items-center gap-2">
               <Image
@@ -131,7 +134,7 @@ const AppHeader: React.FC = () => {
                 href="/auth/logout"
                 className="ml-2 text-sm text-red-500 hover:underline"
               >
-                Logout
+                Гарах
               </Link>
             </div>
           ) : (
