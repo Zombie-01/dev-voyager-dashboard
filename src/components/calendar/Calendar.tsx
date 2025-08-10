@@ -27,6 +27,8 @@ const Calendar: React.FC = () => {
   const [eventEndDate, setEventEndDate] = useState("");
   const [eventLevel, setEventLevel] = useState("Primary");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loader, setLoader] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [weeks, setWeeks] = useState<any[]>([]);
   const calendarRef = useRef<FullCalendar>(null);
   const { isOpen, openModal, closeModal } = useModal();
@@ -41,6 +43,8 @@ const Calendar: React.FC = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
+      setLoader(true);
+      setError(null);
       try {
         const token = await getAccessToken();
         const res = await fetch(
@@ -52,6 +56,9 @@ const Calendar: React.FC = () => {
             },
           }
         );
+        if (!res.ok) {
+          throw new Error("Календарийн мэдээллийг татахад алдаа гарлаа.");
+        }
         const data = await res.json();
         setWeeks(data.weeks || []);
 
@@ -71,12 +78,18 @@ const Calendar: React.FC = () => {
           });
         });
         setEvents(transformedEvents);
-      } catch (err) {
-        console.error("Error fetching events:", err);
+      } catch (err: any) {
+        const message =
+          err instanceof Error ? err.message : "An unknown error occurred";
+        setError(message);
+        console.error("Error fetching events:", message);
+      } finally {
+        setLoader(false);
       }
     };
 
     if (user) fetchEvents();
+    else setLoader(false);
   }, [user]);
 
   const findWeekForDate = (dateStr: string) => {
@@ -158,27 +171,57 @@ const Calendar: React.FC = () => {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="custom-calendar">
-        <FullCalendar
-          ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: "prev,next addEventButton",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay",
-          }}
-          events={events}
-          selectable={true}
-          select={handleDateSelect}
-          eventClick={handleEventClick}
-          eventContent={renderEventContent}
-          customButtons={{
-            addEventButton: {
-              text: "Add Event +",
-              click: openModal,
-            },
-          }}
-        />
+        {loader ? (
+          <div className="flex justify-center items-center py-20">
+            <svg
+              className="animate-spin h-8 w-8 text-blue-500 dark:text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
+            </svg>
+          </div>
+        ) : error ? (
+          <div className="py-20 text-center text-red-500">
+            <p className="font-semibold">Алдаа гарлаа</p>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
+        ) : (
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            headerToolbar={{
+              left: "prev,next addEventButton",
+              center: "title",
+              right: "dayGridMonth,timeGridWeek,timeGridDay",
+            }}
+            events={events}
+            selectable={true}
+            select={handleDateSelect}
+            eventClick={handleEventClick}
+            eventContent={renderEventContent}
+            customButtons={{
+              addEventButton: {
+                text: "Add Event +",
+                click: openModal,
+              },
+            }}
+          />
+        )}
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] p-6 lg:p-10">
