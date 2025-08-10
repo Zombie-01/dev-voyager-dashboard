@@ -6,6 +6,7 @@ import Pagination from "@/components/tables/Pagination";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { getAccessToken } from "@auth0/nextjs-auth0";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function BasicTables() {
   const [tableData, setTableData] = useState<any[]>([]);
@@ -32,11 +33,14 @@ export default function BasicTables() {
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if (!res.ok) {
+          throw new Error("Хэрэглэгчдийн мэдээллийг татахад алдаа гарлаа.");
+        }
         const data = await res.json();
         setTableData(data.users || []);
         setTotalPages(data.pagination?.pages || 1);
       } catch (err) {
-        console.error("Хэрэглэгчдийн мэдээллийг авахад алдаа гарлаа:", err);
+        toast.error("Хэрэглэгчдийн мэдээллийг авахад алдаа гарлаа:");
       } finally {
         setLoader(false);
       }

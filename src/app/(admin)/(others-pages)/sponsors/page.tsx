@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { getAccessToken } from "@auth0/nextjs-auth0";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const PER_PAGE = 10;
 
@@ -46,8 +47,7 @@ export default function SponsorsTable() {
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "An unknown error occurred";
-        setError(message);
-        console.error("Ивээн тэтгэгчдийн мэдээллийг авахад алдаа гарлаа:", message);
+        toast.error(message);
       } finally {
         setLoader(false);
       }

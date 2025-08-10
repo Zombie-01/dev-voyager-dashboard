@@ -13,6 +13,7 @@ import {
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import { useUser, getAccessToken } from "@auth0/nextjs-auth0";
+import { toast } from "sonner";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
@@ -57,6 +58,7 @@ const Calendar: React.FC = () => {
           }
         );
         if (!res.ok) {
+          toast.error("Календарийн мэдээллийг татахад алдаа гарлаа.");
           throw new Error("Календарийн мэдээллийг татахад алдаа гарлаа.");
         }
         const data = await res.json();
@@ -81,7 +83,7 @@ const Calendar: React.FC = () => {
       } catch (err: any) {
         const message =
           err instanceof Error ? err.message : "An unknown error occurred";
-        setError(message);
+        toast.error(message);
         console.error("Error fetching events:", message);
       } finally {
         setLoader(false);

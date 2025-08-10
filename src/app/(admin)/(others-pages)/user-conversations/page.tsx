@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import Alert from "@/components/ui/alert/Alert";
 import Skeleton from "../../(ui-elements)/loader/skeleton";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface AlertProps {
   variant: "success" | "error" | "warning" | "info";
@@ -30,7 +31,6 @@ export default function ConversationsTreeView() {
   const [expandedMessages, setExpandedMessages] = useState<{ [key: string]: any[] }>({});
   const [loadingMessages, setLoadingMessages] = useState<string | null>(null);
   const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
-  const [alert, setAlert] = useState<AlertProps | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [totalSessions, setTotalSessions] = useState<number | null>(null);
@@ -75,14 +75,10 @@ export default function ConversationsTreeView() {
         setHasMore(data.has_more);
         setCursor(data.next_cursor);
       } else {
-        throw new Error(data.detail || "Алдаа гарлаа.");
+        throw new Error("Алдаа гарлаа.");
       }
     } catch (err: any) {
-      setAlert({
-        variant: "error",
-        title: "Харилцан яриа татахад алдаа гарлаа",
-        message: err.message || "Серверээс өгөгдөл авч чадсангүй.",
-      });
+           toast.error( "Мессеж татахад алдаа гарлаа.");
     } finally {
       setLoadingConversations(false);
     }
@@ -121,14 +117,11 @@ export default function ConversationsTreeView() {
           [sessionId]: data.has_more,
         }));
       } else {
-        throw new Error(data.detail || "Мессежүүд татаж чадсангүй.");
+        throw new Error("Мессежүүд татаж чадсангүй.");
       }
     } catch (err: any) {
-      setAlert({
-        variant: "error",
-        title: "Мессеж татахад алдаа гарлаа",
-        message: err.message || "Сервертэй холбогдож чадсангүй.",
-      });
+      toast.error( "Мессеж татахад алдаа гарлаа.");
+    
     } finally {
       setLoadingMessages(null);
     }
@@ -156,16 +149,7 @@ export default function ConversationsTreeView() {
       <PageBreadcrumb pageTitle="Хэрэглэгчийн Харилцан Яриа" />
 
       <div className="space-y-6">
-        {alert && (
-          <Alert
-            variant={alert.variant}
-            title={alert.title}
-            message={alert.message}
-            showLink={alert.showLink}
-            linkHref={alert.linkHref}
-            linkText={alert.linkText}
-          />
-        )}
+       
 
         <ComponentCard title="Харилцан ярианы жагсаалт">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4 dark:text-white">
