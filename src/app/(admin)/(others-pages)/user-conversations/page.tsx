@@ -10,10 +10,11 @@ import {
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
 import { getAccessToken } from "@auth0/nextjs-auth0";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import Alert from "@/components/ui/alert/Alert";
 import Skeleton from "../../(ui-elements)/loader/skeleton";
 import { format } from "date-fns";
+import Markdown from "@/components/common/Markdown";
 import { toast } from "sonner";
 
 interface AlertProps {
@@ -43,6 +44,22 @@ export default function ConversationsTreeView() {
 
   const perPage = 10;
   const innerHitSize = 5;
+
+  const formatDateTime = (input: string | number | Date) => {
+    const d = new Date(input);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ulaanbaatar",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).formatToParts(d);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value || "00";
+    return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
+  };
 
   const fetchSessionList = async (initial = false) => {
     try {
@@ -233,16 +250,15 @@ export default function ConversationsTreeView() {
                         const messages = expandedMessages[sessionId] || [];
                         const previewTruncated = session.preview_truncated;
                         return (
-                          <>
+                          <Fragment key={sessionId}>
                             <TableRow
-                              key={sessionId}
                               onClick={() => toggleExpand(sessionId, previewTruncated)}
                               className="cursor-pointer dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5"
                             >
                               <TableCell className="px-5 py-4">{sessionId}</TableCell>
                               <TableCell className="px-5 py-4">{preview[0]?.user_id || "-"}</TableCell>
                               <TableCell className="px-5 py-4 truncate max-w-xs">{lastMessage}</TableCell>
-                              <TableCell className="px-5 py-4">{format(new Date(session.end_timestamp), "yyyy-MM-dd HH:mm:ss")}</TableCell>
+                              <TableCell className="px-5 py-4">{formatDateTime(session.end_timestamp)}</TableCell>
                               <TableCell className="px-5 py-4">{preview[0]?.article_id || "-"}</TableCell>
                               <TableCell className="px-5 py-4">{preview[0]?.article_url || "-"}</TableCell>
                               <TableCell className="px-5 py-4">{previewTruncated ? "Тийм" : "Үгүй"}</TableCell>
@@ -264,22 +280,43 @@ export default function ConversationsTreeView() {
                                           return (
                                             <div
                                               key={index}
-                                              className={`flex ${isUser ? "justify-start" : "justify-end"}`}
+                                              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
                                             >
-                                              <div
-                                                className={`max-w-[70%] p-3 rounded-xl border text-sm shadow-2xl whitespace-pre-wrap
-                                                  ${isUser
-                                                    ? "bg-gray-100 dark:bg-gray-700 text-left text-gray-800 dark:text-white"
-                                                    : "bg-blue-700  text-white dark:bg-blue-600 text-right"
-                                                  }`}
-                                              >
-                                                <div className="text-xs opacity-70 mb-1">
-                                                  {format(new Date(msg.timestamp), "yyyy-MM-dd HH:mm:ss")} • {msg.role}
-                                                  {msg.user_id && <> • {msg.user_id}</>}
-                                                  {msg.article_id && <> • {msg.article_id}</>}
-                                                  {msg.article_url && <> • {msg.article_url}</>}
+                                              <div className="flex items-start gap-2 max-w-[80%]">
+                                                {!isUser && (
+                                                  <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                                                    A
+                                                  </div>
+                                                )}
+                                                <div
+                                                  className={`max-w-full p-3 rounded-xl border text-sm shadow-2xl whitespace-pre-wrap
+                                                    ${isUser
+                                                      ? "bg-blue-700  text-white dark:bg-blue-600 text-right"
+                                                      : "bg-gray-100 dark:bg-gray-700 text-left text-gray-800 dark:text-white"
+                                                    }`}
+                                                >
+                                                  <div className="flex items-center gap-2 text-xs opacity-70 mb-1">
+                                                    <span
+                                                      className={`px-2 py-0.5 rounded-full text-[10px] ${
+                                                        isUser
+                                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200"
+                                                          : "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                                                      }`}
+                                                    >
+                                                      {isUser ? "User" : "Assistant"}
+                                                    </span>
+                                                    <span>{formatDateTime(msg.timestamp)}</span>
+                                                    {msg.user_id && <span>• {msg.user_id}</span>}
+                                                    {msg.article_id && <span>• {msg.article_id}</span>}
+                                                    {msg.article_url && <span>• {msg.article_url}</span>}
+                                                  </div>
+                                                  <Markdown content={msg.content || ""} />
                                                 </div>
-                                                <div>{msg.content}</div>
+                                                {isUser && (
+                                                  <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                                                    U
+                                                  </div>
+                                                )}
                                               </div>
                                             </div>
                                           );
@@ -300,9 +337,9 @@ export default function ConversationsTreeView() {
                                 </TableCell>
                               </TableRow>
                             )}
-                          </>
+                          </Fragment>
                         );
-                      })}*
+                      })}
                     </TableBody>
                   </Table>
                 )}

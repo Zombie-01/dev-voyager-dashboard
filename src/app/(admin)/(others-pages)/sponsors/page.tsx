@@ -18,7 +18,8 @@ const PER_PAGE = 10;
 
 export default function SponsorsTable() {
   const [sponsorData, setSponsorData] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [displayNameFilter, setDisplayNameFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loader, setLoader] = useState(false);
@@ -30,14 +31,16 @@ export default function SponsorsTable() {
       setError(null);
       try {
         const token = await getAccessToken();
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/sponsors?page=${page}&per_page=${PER_PAGE}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/sponsors`);
+        url.searchParams.set("page", String(page));
+        url.searchParams.set("per_page", String(PER_PAGE));
+        if (nameFilter) url.searchParams.set("name", nameFilter);
+        if (displayNameFilter) url.searchParams.set("display_name", displayNameFilter);
+        const res = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!res.ok) {
           throw new Error("Ивээн тэтгэгчдийн мэдээллийг татахад алдаа гарлаа.");
         }
@@ -54,11 +57,7 @@ export default function SponsorsTable() {
     };
 
     fetchData();
-  }, [page]);
-
-  const filteredSponsors = sponsorData.filter((sponsor) =>
-    sponsor.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  }, [page, nameFilter, displayNameFilter]);
 
   return (
     <div>
@@ -66,15 +65,34 @@ export default function SponsorsTable() {
 
       <div className="space-y-6">
         <ComponentCard title="Ивээн тэтгэгчид">
-          {/* Хайлт */}
-          <div className="mb-4 max-w-xs">
-            <input
-              type="text"
-              placeholder="Ивээн тэтгэгч хайх..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
-            />
+          {/* Шүүлтүүр */}
+          <div className="mb-4 flex flex-wrap gap-3">
+            <div className="max-w-xs w-full sm:w-64">
+              <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Name</label>
+              <input
+                type="text"
+                placeholder="name..."
+                value={nameFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setNameFilter(e.target.value);
+                }}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              />
+            </div>
+            <div className="max-w-xs w-full sm:w-64">
+              <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Display name</label>
+              <input
+                type="text"
+                placeholder="display_name..."
+                value={displayNameFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setDisplayNameFilter(e.target.value);
+                }}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              />
+            </div>
           </div>
 
           {/* Loader, Error, or Table Content */}
@@ -111,11 +129,12 @@ export default function SponsorsTable() {
               {/* Хүснэгт */}
               <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5">
                 <div className="max-w-full overflow-x-auto">
-                  <div className="min-w-[600px]">
+                  <div className="min-w-[720px]">
                     <Table>
                       <TableHeader>
                         <TableRow className="dark:text-white">
                           <TableCell isHeader>Нэр</TableCell>
+                          <TableCell isHeader>Дэлгэцийн нэр</TableCell>
                           <TableCell isHeader>Вэбсайт</TableCell>
                           <TableCell isHeader>Лого</TableCell>
                           <TableCell isHeader>Бүртгүүлсэн огноо</TableCell>
@@ -123,23 +142,26 @@ export default function SponsorsTable() {
                       </TableHeader>
 
                       <TableBody className="divide-y divide-gray-100 dark:divide-white/10">
-                        {filteredSponsors.length === 0 && (
+                        {sponsorData.length === 0 && (
                           <TableRow>
                             <TableCell
-                              colSpan={4}
+                              colSpan={5}
                               className="text-center py-4 text-gray-500 dark:text-gray-400"
                             >
                               Ивээн тэтгэгч олдсонгүй.
                             </TableCell>
                           </TableRow>
                         )}
-                        {filteredSponsors.map((sponsor) => (
+                        {sponsorData.map((sponsor) => (
                           <TableRow
                             key={sponsor.id}
                             className="dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/10"
                           >
                             <TableCell className="px-5 py-4 text-start">
-                              {sponsor.display_name || sponsor.name}
+                              {sponsor.name || "-"}
+                            </TableCell>
+                            <TableCell className="px-5 py-4 text-start">
+                              {sponsor.display_name || "-"}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-start text-sm text-blue-600 underline dark:text-blue-400">
                               <a
@@ -151,15 +173,20 @@ export default function SponsorsTable() {
                               </a>
                             </TableCell>
                             <TableCell className="px-4 py-3">
-                              <img
-                                src={sponsor.logo_url}
-                                alt={sponsor.name}
-                                className="h-8 max-w-[120px]"
-                              />
+                              {sponsor.logo_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={sponsor.logo_url}
+                                  alt={sponsor.name}
+                                  className="h-8 max-w-[120px]"
+                                />
+                              ) : (
+                                <span className="text-xs text-gray-400">-</span>
+                              )}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-start text-sm text-gray-500 dark:text-gray-400">
                               {sponsor.created_at
-                                ? new Date(sponsor.created_at).toLocaleDateString("mn-MN")
+                                ? new Date(sponsor.created_at).toLocaleDateString("en-CA", { timeZone: "Asia/Ulaanbaatar" })
                                 : "N/A"}
                             </TableCell>
                           </TableRow>

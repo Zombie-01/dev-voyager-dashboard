@@ -10,18 +10,24 @@ import { toast } from "sonner";
 
 export default function BasicTables() {
   const [tableData, setTableData] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [debouncedEmail, setDebouncedEmail] = useState("");
+  const [debouncedName, setDebouncedName] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loader, setLoader] = useState(false);
   const [perPage, setPerPage] = useState(10);
 
-  // Debounce search input
+  // Debounce email + name inputs
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 500);
-    return () => clearTimeout(timer);
-  }, [search]);
+    const t1 = setTimeout(() => setDebouncedEmail(email), 500);
+    const t2 = setTimeout(() => setDebouncedName(name), 500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [email, name]);
 
   // Fetch user data
   useEffect(() => {
@@ -29,8 +35,12 @@ export default function BasicTables() {
       setLoader(true);
       try {
         const token = await getAccessToken();
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/user?email=${debouncedSearch}&page=${page}&per_page=${perPage}`;
-        const res = await fetch(url, {
+        const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/user`);
+        url.searchParams.set("page", String(page));
+        url.searchParams.set("per_page", String(perPage));
+        if (debouncedEmail) url.searchParams.set("email", debouncedEmail);
+        if (debouncedName) url.searchParams.set("name", debouncedName);
+        const res = await fetch(url.toString(), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
@@ -47,7 +57,7 @@ export default function BasicTables() {
     };
 
     fetchData();
-  }, [debouncedSearch, page, perPage]);
+  }, [debouncedEmail, debouncedName, page, perPage]);
 
   // Export to Excel handler
   const handleExport = () => {
@@ -55,7 +65,7 @@ export default function BasicTables() {
       const exportData = tableData.map((item) => ({
         Нэр: item.user?.name || "Нэргүй",
         Имэйл: item.user?.email || "Имэйл алга",
-        Оноосон: item.assigned_at
+        Бүртгүүлсэн: item.assigned_at
           ? new Date(item.assigned_at).toLocaleDateString("mn-MN")
           : "N/A",
       }));
@@ -74,49 +84,44 @@ export default function BasicTables() {
 
       <div className="space-y-6">
         <ComponentCard title="Хэрэглэгчийн хайлт">
-          {/* Search */}
-          <div className="mb-4 max-w-xs">
-            <input
-              type="text"
-              placeholder="Имэйлээр хайх..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
-            />
-          </div>
-
-          {/* Per Page + Export */}
-          <div className="flex dark:text-white flex-wrap justify-between items-center gap-4 mb-4">
-            {/* Per Page Dropdown */}
-            <div>
-              <label className="text-sm mr-2 text-gray-600 dark:text-gray-200">Хуудаслалт:</label>
-              <select
-                value={perPage}
+          {/* Filters + Export */}
+          <div className="mb-4 flex flex-wrap gap-3 items-end">
+            <div className="max-w-xs w-full sm:w-64">
+              <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Имэйл</label>
+              <input
+                type="text"
+                placeholder="email..."
+                value={email}
                 onChange={(e) => {
-                  setPerPage(parseInt(e.target.value));
+                  setEmail(e.target.value);
                   setPage(1);
                 }}
-                className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
-              >
-                {[5, 10, 20, 50].map((num) => (
-                  <option key={num} value={num}>
-                    {num} мөр
-                  </option>
-                ))}
-              </select>
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              />
             </div>
-
-            {/* Export to Excel Button */}
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 rounded bg-green-600 text-white text-sm hover:bg-green-700"
-            >
-              Excel-рүү экспортлох
-            </button>
+            <div className="max-w-xs w-full sm:w-64">
+              <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Нэр</label>
+              <input
+                type="text"
+                placeholder="name..."
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              />
+            </div>
+            <div className="ml-auto">
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+              >
+                Excel-рүү экспортлох
+              </button>
+            </div>
           </div>
+
 
           {/* Loader */}
           {loader ? (
@@ -153,7 +158,7 @@ export default function BasicTables() {
                         <TableRow className="dark:text-white">
                           <TableCell isHeader>Хэрэглэгч</TableCell>
                           <TableCell isHeader>Имэйл</TableCell>
-                          <TableCell isHeader>Оноосон огноо</TableCell>
+                          <TableCell isHeader>Бүртгүүлсэн огноо</TableCell>
                         </TableRow>
                       </TableHeader>
 
@@ -181,7 +186,7 @@ export default function BasicTables() {
                             </TableCell>
                             <TableCell className="px-4 py-3 text-start text-sm text-gray-500 dark:text-gray-400">
                               {item.assigned_at
-                                ? new Date(item.assigned_at).toLocaleDateString("mn-MN")
+                                ? new Date(item.assigned_at).toLocaleDateString("en-CA", { timeZone: "Asia/Ulaanbaatar" })
                                 : "N/A"}
                             </TableCell>
                           </TableRow>
