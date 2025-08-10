@@ -60,6 +60,11 @@ const navItems: NavItem[] = [
     name: "Спонсор",
     path: "/sponsors",
   },
+  {
+    icon: <PageIcon />,
+    name: "Нийтлэлүүд",
+    path: "/articles",
+  },
    {
     icon: <BoxIcon />,
     name: "Хэрэглэгчийн харилцаанууд",
