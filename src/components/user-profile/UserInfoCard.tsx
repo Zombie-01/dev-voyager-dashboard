@@ -159,7 +159,7 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
 
         {/* Main content */}
         <div className="flex-1 min-h-0 mx-4 mt-2 mb-0 bg-gray-100 rounded-[36px] shadow-lg flex flex-col overflow-auto px-4 py-4">
-          <Creditbar />
+          <Creditbar credit={credit} sponsorUrl={sponsorUrl} sponsorLogo={sponsorLogo} sponsor={"test"} media={""} />
           {withUser === "chat" ? (
             // ...existing chat-like content...
             <div className="flex flex-col flex-1 min-h-0">
@@ -384,29 +384,83 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
   );
 }
 
-const Creditbar = () => (
-  <div className="flex items-center justify-between rounded-2xl h-[62px] px-6 bg-[#111] gap-4">
-    <div className="flex flex-col flex-1 gap-1 max-w-[150px]">
-      <div className="flex items-center justify-between text-white text-sm">
-        <div className="flex items-center gap-1">
-          <span className="text-xs">Паблик<br />кредит:</span>
-          <span className="font-bold text-lg">{credit}</span>
+
+export const Creditbar = ({ credit, sponsorUrl, sponsorLogo, sponsor, media }: any) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const publicCreditInfo = `
+${sponsor?.display_name ?? "Түнш байгууллага"} & ${media?.name ?? "медиа"} танд паблик кредитийг үнэ төлбөргүй олгож байна.  
+Энэхүү хамтын санаачилга нь мэдээллийн хүртээмжийг нэмэгдүүлж, олон нийтийн мэдэх эрхийг дэмжих зорилготой.  
+Та энэхүү боломжийг ашиглан ${media?.bot_name ?? "Voyager AI"} хиймэл оюун ухаант туслахтай харилцаж,  
+өөрийн мэдлэгт үнэ цэнтэй хөрөнгө оруулалт хийгээрэй.
+`;
+
+  return (
+    <div className="flex items-center justify-between rounded-2xl h-[62px] px-6 bg-[#111] gap-4 relative">
+      {/* Credit Info */}
+      <div className="flex flex-col flex-1 gap-1 max-w-[150px]">
+        <div className="flex items-center justify-between text-white text-sm relative">
+          <div className="flex items-center gap-1">
+            <span className="text-xs">
+              Паблик
+              <br />
+              кредит:
+            </span>
+            <span className="font-bold text-lg">{credit}</span>
+          </div>
+
+          {/* Info Icon with Tooltip */}
+          <div
+            className="relative"
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            <InfoIcon className="w-5 h-5 cursor-pointer text-gray-300 hover:text-white" />
+
+            {showTooltip && (
+              <div className="absolute left-1/2 -translate-x-1/2 mt-2 z-50">
+                {/* Tooltip box */}
+                <div className="bg-gray-900 text-white text-xs p-3 rounded-lg shadow-lg max-w-xs whitespace-pre-line">
+                  {publicCreditInfo}
+                  {/* Arrow */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-6 border-l-transparent border-r-6 border-r-transparent border-b-6 border-b-gray-900"></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <InfoIcon className="w-5 h-5" />
+
+        {/* Progress bar */}
+        <div className="relative w-full max-w-[150px]">
+          <div className="h-[3px] bg-gray-200 rounded w-full overflow-hidden">
+            <div
+              className="h-full bg-red-500 transition-all"
+              style={{ width: "20.33%" }}
+            />
+          </div>
+        </div>
       </div>
-      <div className="relative w-full max-w-[150px]">
-        <div className="h-[3px] bg-gray-200 rounded w-full overflow-hidden">
-          <div className="h-full bg-red-500 transition-all" style={{ width: "20.33%" }} />
+
+      {/* Sponsor */}
+      <div className="flex items-center gap-2">
+        <div className="text-white text-xs text-right">
+          Мэдлэг
+          <br />
+          санхүүжүүлэгч
         </div>
+        <a
+          href={sponsorUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="h-[30px]"
+        >
+          <img
+            src={sponsorLogo}
+            alt="Sponsor Logo"
+            className="h-full max-w-full object-contain"
+          />
+        </a>
       </div>
     </div>
-    <div className="flex items-center gap-2">
-      <div className="text-white text-xs text-right">
-        Мэдлэг<br />санхүүжүүлэгч
-      </div>
-      <a href={sponsorUrl} target="_blank" rel="noopener noreferrer" className="h-[30px]">
-        <img src={sponsorLogo} alt="Sponsor Logo" className="h-full max-w-full object-contain" />
-      </a>
-    </div>
-  </div>
-);
+  );
+};
