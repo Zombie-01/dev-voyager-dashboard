@@ -1,15 +1,37 @@
 "use client";
 import React from "react";
 import { ApexOptions } from "apexcharts";
-import ChartTab from "../common/ChartTab";
 import dynamic from "next/dynamic";
+import Skeleton from "@/app/(admin)/(ui-elements)/loader/skeleton";
 
 // Dynamically import the ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
-export default function StatisticsChart() {
+type Props = {
+  categories?: string[];
+  usersSeries?: number[];
+  conversationsSeries?: number[];
+  loading?: boolean;
+  startMonth?: string;
+  endMonth?: string;
+  onChangeStart?: (v: string) => void;
+  onChangeEnd?: (v: string) => void;
+  onClear?: () => void;
+};
+
+export default function StatisticsChart({
+  categories,
+  usersSeries,
+  conversationsSeries,
+  loading,
+  startMonth,
+  endMonth,
+  onChangeStart,
+  onChangeEnd,
+  onClear,
+}: Props) {
   const options: ApexOptions = {
     legend: {
       show: false,
@@ -67,20 +89,21 @@ export default function StatisticsChart() {
     },
     xaxis: {
       type: "category",
-      categories: [
-        "1-р сар",
-        "2-р сар",
-        "3-р сар",
-        "4-р сар",
-        "5-р сар",
-        "6-р сар",
-        "7-р сар",
-        "8-р сар",
-        "9-р сар",
-        "10-р сар",
-        "11-р сар",
-        "12-р сар",
-      ],
+      categories:
+        categories ?? [
+          "1-р сар",
+          "2-р сар",
+          "3-р сар",
+          "4-р сар",
+          "5-р сар",
+          "6-р сар",
+          "7-р сар",
+          "8-р сар",
+          "9-р сар",
+          "10-р сар",
+          "11-р сар",
+          "12-р сар",
+        ],
       axisBorder: {
         show: false,
       },
@@ -109,12 +132,14 @@ export default function StatisticsChart() {
 
   const series = [
     {
-      name: "Идэвхтэй хэрэглэгчид",
-      data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
+      name: "Бүртгүүлсэн хэрэглэгчид",
+      data:
+        usersSeries ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     },
     {
-      name: "Идэвхтэй хэрэглэгчийн яриа",
-      data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
+      name: "Хэрэглэгчдийн асуулт хариулт",
+      data:
+        conversationsSeries ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     },
   ];
 
@@ -126,22 +151,38 @@ export default function StatisticsChart() {
             Статистик
           </h3>
           <p className="mt-1 text-gray-500 text-theme-sm dark:text-gray-400">
-            Сар бүрийн зорилтот үзүүлэлт
+            Сар бүрийн статистик үзүүлэлт
           </p>
         </div>
-        <div className="flex items-start w-full gap-3 sm:justify-end">
-          <ChartTab />
+        <div className="flex items-end w-full gap-3 sm:justify-end">
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600 dark:text-gray-300 mb-1">Эхлэх сар</label>
+            <input
+              type="month"
+              value={startMonth ?? ""}
+              onChange={(e) => onChangeStart?.(e.target.value)}
+              className="border px-3 py-2 rounded-md text-sm dark:bg-transparent dark:text-white dark:border-gray-700"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600 dark:text-gray-300 mb-1">Дуусах сар</label>
+            <input
+              type="month"
+              value={endMonth ?? ""}
+              onChange={(e) => onChangeEnd?.(e.target.value)}
+              className="border px-3 py-2 rounded-md text-sm dark:bg-transparent dark:text-white dark:border-gray-700"
+            />
+          </div>
         </div>
       </div>
 
       <div className="max-w-full overflow-x-auto custom-scrollbar">
         <div className="min-w-[1000px] xl:min-w-full">
-          <ReactApexChart
-            options={options}
-            series={series}
-            type="area"
-            height={310}
-          />
+          {loading ? (
+            <Skeleton className="h-[310px] w-full" />
+          ) : (
+            <ReactApexChart options={options} series={series} type="area" height={310} />
+          )}
         </div>
       </div>
     </div>
