@@ -49,7 +49,8 @@ const Calendar: React.FC = () => {
   const [mediaId, setMediaId] = useState<string>("");
   const [bannerGotoUrl, setBannerGotoUrl] = useState("");
   const [bannerImageUrl, setBannerImageUrl] = useState("");
-  const [bannerUrlError, setBannerUrlError] = useState("");
+  const [bannerGotoUrlError, setBannerGotoUrlError] = useState("");
+  const [bannerImageUrlError, setBannerImageUrlError] = useState("");
   const [isCalendarLoading, setIsCalendarLoading] = useState(true);
   const [isFetchingSponsors, setIsFetchingSponsors] = useState(false);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
@@ -137,7 +138,8 @@ const Calendar: React.FC = () => {
     setIsConfirmingBooking(false);
     setBannerGotoUrl("");
     setBannerImageUrl("");
-    setBannerUrlError("");
+    setBannerGotoUrlError("");
+    setBannerImageUrlError("");
     setIsFetchingSponsors(true);
     setIsBookingModalOpen(true);
     try {
@@ -163,7 +165,6 @@ const Calendar: React.FC = () => {
   };
 
   const handleBookingSubmit = async () => {
-    if (bannerUrlError) return;
     setIsBookingInProgress(true);
     try {
       const token = await getAccessToken();
@@ -196,9 +197,28 @@ const Calendar: React.FC = () => {
     const url = e.target.value;
     setBannerGotoUrl(url);
     if (url && !url.startsWith("https://")) {
-      setBannerUrlError("URL must start with https://");
+      setBannerGotoUrlError("URL must start with https://");
     } else {
-      setBannerUrlError("");
+      setBannerGotoUrlError("");
+    }
+  };
+
+  const handleContinueBooking = () => {
+    let hasError = false;
+    if (!bannerGotoUrl) {
+      setBannerGotoUrlError("Баннераас шилжих линк оруулна уу.");
+      hasError = true;
+    }
+    if (!bannerImageUrl) {
+      setBannerImageUrlError("Баннер зураг оруулна уу.");
+      hasError = true;
+    }
+    if (bannerGotoUrl && !bannerGotoUrl.startsWith("https://")) {
+      setBannerGotoUrlError("URL must start with https://");
+      hasError = true;
+    }
+    if (!hasError) {
+      setIsConfirmingBooking(true);
     }
   };
 
@@ -239,7 +259,7 @@ const Calendar: React.FC = () => {
           onClick={() => setShowPastWeeks(!showPastWeeks)}
           className="px-4 py-2 rounded-md bg-blue-500 text-white font-semibold"
         >
-          {showPastWeeks ? "Hide Past Weeks" : "Show Past Weeks"}
+          {showPastWeeks ? "Өмнөхүүдийг нуух" : "Өмнөхүүдийг харах"}
         </button>
         <select 
           value={selectedYear}
@@ -276,7 +296,7 @@ const Calendar: React.FC = () => {
                   {isCurrentWeek && (
                     <span className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">Current Week</span>
                   )}
-                  <h3 className={`font-bold text-lg mb-2 ${isCurrentWeek ? 'text-blue-600 dark:text-blue-300' : ''}`}>Week {week.week}</h3>
+                  <h3 className={`font-bold text-lg mb-2 ${isCurrentWeek ? 'text-blue-600 dark:text-blue-300' : ''}`}>{week.week}-р долоо хоног</h3>
                   <p className="text-sm mb-2">{week.start_date} - {week.end_date}</p>
                   {week.batches.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
@@ -288,18 +308,18 @@ const Calendar: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <p>No sponsors</p>
+                    <p>Спонсор байхгүй</p>
                   )}
                 </div>
                 <div className="mt-4">
                   {(isPastWeek || isCurrentWeek) && week.batches.length > 0 && (
-                    <button onClick={() => handleSeeStats(week)} className="w-full px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white font-semibold">See Stats</button>
+                    <button onClick={() => handleSeeStats(week)} className="w-full px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white font-semibold">Дэлгэрэнгүй</button>
                   )}
                   {isFutureWeek && week.batches.length === 0 && (
-                    <button onClick={() => handleBookSponsorClick(week)} className="w-full px-4 py-2 rounded-md bg-green-500 text-white font-semibold">Book Sponsor</button>
+                    <button onClick={() => handleBookSponsorClick(week)} className="w-full px-4 py-2 rounded-md bg-green-500 text-white font-semibold">Спонсор бүүклэх</button>
                   )}
                   {isFutureWeek && week.batches.length > 0 && (
-                    <button onClick={() => handleCancelBookingClick(week.batches[0])} className="w-full px-4 py-2 rounded-md bg-red-500 text-white font-semibold">Cancel Booking</button>
+                    <button onClick={() => handleCancelBookingClick(week.batches[0])} className="w-full px-4 py-2 rounded-md bg-red-500 text-white font-semibold">Захиалга цуцлах</button>
                   )}
                 </div>
               </div>
@@ -336,8 +356,9 @@ const Calendar: React.FC = () => {
         <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} className="max-w-[700px] p-6 lg:p-10">
           <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
             <h5 className="mb-4 font-semibold text-gray-800 dark:text-white/90 text-xl">
-              Book Sponsor for Week {selectedWeekForBooking.week}
+              {selectedYear} оны {selectedWeekForBooking.week} дахь долоо хоногийн спонсор бүүклэх
             </h5>
+            <p className="text-sm mb-2">{selectedWeekForBooking.start_date} - {selectedWeekForBooking.end_date}</p>
             {isFetchingSponsors ? (
               <div className="flex justify-center items-center h-32">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -345,7 +366,7 @@ const Calendar: React.FC = () => {
             ) : !isConfirmingBooking ? (
               <div>
                 <div className="mb-4">
-                  <label htmlFor="sponsor-select" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Select a sponsor</label>
+                  <label htmlFor="sponsor-select" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Спонсор сонгох</label>
                   <select 
                     id="sponsor-select"
                     value={selectedSponsor}
@@ -358,48 +379,54 @@ const Calendar: React.FC = () => {
                   </select>
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="banner-goto-url" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Banner Go To URL</label>
+                  <label htmlFor="banner-goto-url" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Баннераас шилжих линк</label>
                   <input 
                     id="banner-goto-url"
                     type="text"
                     value={bannerGotoUrl}
                     onChange={handleBannerUrlChange}
-                    className={`w-full px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 ${bannerUrlError ? 'border-red-500' : ''}`}
+                    className={`w-full px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 ${bannerGotoUrlError ? 'border-red-500' : ''}`}
                     placeholder="https://example.com"
                   />
-                  {bannerUrlError && <p className="text-red-500 text-xs mt-1">{bannerUrlError}</p>}
+                  {bannerGotoUrlError && <p className="text-red-500 text-xs mt-1">{bannerGotoUrlError}</p>}
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="banner-image-url" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Banner Image URL</label>
+                  <label htmlFor="banner-image-url" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Баннер зураг оруулах</label>
                   <input 
                     id="banner-image-url"
                     type="text"
                     value={bannerImageUrl}
-                    onChange={(e) => setBannerImageUrl(e.target.value)}
-                    className="w-full px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600"
+                    onChange={(e) => {
+                      setBannerImageUrl(e.target.value);
+                      if (e.target.value) {
+                        setBannerImageUrlError("");
+                      }
+                    }}
+                    className={`w-full px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 ${bannerImageUrlError ? 'border-red-500' : ''}`}
                     placeholder="https://example.com/image.png"
                   />
+                  {bannerImageUrlError && <p className="text-red-500 text-xs mt-1">{bannerImageUrlError}</p>}
                   <p className="text-xs text-gray-500 mt-1">Note: Direct file upload is not supported. Please provide a URL to the banner image.</p>
                 </div>
                 <div className="flex gap-2 mt-6 justify-end">
                   <button onClick={() => setIsBookingModalOpen(false)} className="btn-secondary">
-                    Cancel
+                    Болих
                   </button>
-                  <button onClick={() => setIsConfirmingBooking(true)} className="btn-primary" disabled={!!bannerUrlError}>
-                    Book
+                  <button onClick={handleContinueBooking} className="btn-primary">
+                    Үргэлжлүүлэх
                   </button>
                 </div>
               </div>
             ) : (
               <div>
-                <p>Are you sure you want to book <strong>{availableSponsors.find(s => s.id === selectedSponsor)?.display_name}</strong> for Week {selectedWeekForBooking.week}?</p>
+                <p><strong>{availableSponsors.find(s => s.id === selectedSponsor)?.display_name}</strong>-ыг {selectedWeekForBooking.week} дахь долоо хоногийн спонсороор бүүклэхдээ итгэлтэй байна уу?</p>
                 <div className="flex gap-2 mt-6 justify-end">
                   <button onClick={() => setIsConfirmingBooking(false)} className="btn-secondary" disabled={isBookingInProgress}>
-                    Cancel
+                    Болих
                   </button>
                   <button onClick={handleBookingSubmit} className="btn-primary bg-green-500" disabled={isBookingInProgress}>
                     {isBookingInProgress && <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>}
-                    Confirm
+                    Тийм
                   </button>
                 </div>
               </div>
@@ -412,16 +439,16 @@ const Calendar: React.FC = () => {
         <Modal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} className="max-w-[500px] p-6 lg:p-10">
           <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
             <h5 className="mb-4 font-semibold text-gray-800 dark:text-white/90 text-xl">
-              Cancel Booking
+              Спонсор захиалга цуцлах
             </h5>
-            <p>Are you sure you want to cancel the booking for <strong>{batchToCancel.sponsor.display_name}</strong>?</p>
+            <p><strong>{batchToCancel.sponsor.display_name}-ын спонсор захиалгыг цуцлахдаа итгэлтэй байна уу</strong>?</p>
             <div className="flex gap-2 mt-6 justify-end">
               <button onClick={() => setIsCancelModalOpen(false)} className="btn-secondary" disabled={isCancelling}>
-                Cancel
+                Болих
               </button>
               <button onClick={handleCancelBookingSubmit} className="btn-primary bg-red-500" disabled={isCancelling}>
                 {isCancelling && <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>}
-                Confirm
+                Тийм
               </button>
             </div>
           </div>
