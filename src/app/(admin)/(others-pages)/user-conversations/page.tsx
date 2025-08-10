@@ -32,7 +32,9 @@ export default function ConversationsTreeView() {
   const [expandedMessages, setExpandedMessages] = useState<{ [key: string]: any[] }>({});
   const [loadingMessages, setLoadingMessages] = useState<string | null>(null);
   const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
-  const [cursor, setCursor] = useState<string | null>(null);
+  const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
+  const [pageIndex, setPageIndex] = useState<number>(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [totalSessions, setTotalSessions] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -61,15 +63,15 @@ export default function ConversationsTreeView() {
     return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
   };
 
-  const fetchSessionList = async (initial = false) => {
+  const fetchSessionList = async (pageCursor: string | null) => {
     try {
       setLoadingConversations(true);
       const token = await getAccessToken();
       const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/user/conversations`);
       url.searchParams.set("per_page", perPage.toString());
       url.searchParams.set("inner_hit_size", innerHitSize.toString());
-      if (!cursor && initial) url.searchParams.set("include_total", "true");
-      if (cursor) url.searchParams.set("cursor", cursor);
+      if (!pageCursor) url.searchParams.set("include_total", "true");
+      if (pageCursor) url.searchParams.set("cursor", pageCursor);
       if (userIdFilter) url.searchParams.set("end_user_id", userIdFilter);
       if (articleIdFilter) url.searchParams.set("article_id", articleIdFilter);
       if (articleUrlFilter) url.searchParams.set("article_url", articleUrlFilter);
@@ -87,10 +89,14 @@ export default function ConversationsTreeView() {
           const dateB = new Date(b.end_timestamp).getTime();
           return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
         });
-        setConversations((prev) => [...(initial ? [] : prev), ...sorted]);
-        if (initial && data.total_sessions_est) setTotalSessions(data.total_sessions_est);
+        setConversations(sorted);
+        if (!pageCursor && data.total_sessions_est != null) setTotalSessions(data.total_sessions_est);
         setHasMore(data.has_more);
-        setCursor(data.next_cursor);
+        setNextCursor(data.next_cursor);
+        setExpandedSessionId(null);
+        setExpandedMessages({});
+        setDetailMsgCursor({});
+        setDetailHasMore({});
       } else {
         throw new Error("Алдаа гарлаа.");
       }
@@ -156,8 +162,9 @@ export default function ConversationsTreeView() {
   };
 
   useEffect(() => {
-    setCursor(null);
-    fetchSessionList(true);
+    setCursorStack([null]);
+    setPageIndex(0);
+    fetchSessionList(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortOrder, userIdFilter, articleIdFilter, articleUrlFilter]);
 
@@ -347,16 +354,39 @@ export default function ConversationsTreeView() {
             </div>
           </div>
 
-          {hasMore && (
-            <div className="mt-4 flex justify-center">
-              <button
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                onClick={() => fetchSessionList()}
-              >
-                Дараагийн хуудас
-              </button>
+          <div className="mt-4 flex justify-between">
+            <button
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-white/10 dark:text-white"
+              disabled={pageIndex === 0 || loadingConversations}
+              onClick={() => {
+                if (pageIndex === 0) return;
+                const prevCursor = cursorStack[pageIndex - 1] ?? null;
+                setPageIndex((p) => p - 1);
+                fetchSessionList(prevCursor);
+              }}
+            >
+              Өмнөх хуудас
+            </button>
+            <div className="text-xs text-gray-500 dark:text-gray-300 self-center">
+              Хуудас: {pageIndex + 1}
             </div>
-          )}
+            <button
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!hasMore || !nextCursor || loadingConversations}
+              onClick={() => {
+                if (!hasMore || !nextCursor) return;
+                setCursorStack((stack) => {
+                  const nextStack = stack.slice(0, pageIndex + 1);
+                  nextStack[pageIndex + 1] = nextCursor;
+                  return nextStack;
+                });
+                setPageIndex((p) => p + 1);
+                fetchSessionList(nextCursor);
+              }}
+            >
+              Дараагийн хуудас
+            </button>
+          </div>
         </ComponentCard>
       </div>
     </div>
