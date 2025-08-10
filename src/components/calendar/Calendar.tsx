@@ -1,296 +1,432 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import {
-  EventInput,
-  DateSelectArg,
-  EventClickArg,
-  EventContentArg,
-} from "@fullcalendar/core";
-import { useModal } from "@/hooks/useModal";
-import { Modal } from "@/components/ui/modal";
+import React, { useState, useEffect } from "react";
 import { useUser, getAccessToken } from "@auth0/nextjs-auth0";
-import { toast } from "sonner";
+import { startOfWeek, endOfWeek, format, getISOWeek, getYear } from 'date-fns';
+import { Modal } from "@/components/ui/modal";
 
-interface CalendarEvent extends EventInput {
-  extendedProps: {
-    calendar: string;
-  };
+interface Sponsor {
+  id: string;
+  name: string;
+  display_name: string;
+  logo_url: string;
 }
 
-const Calendar: React.FC = () => {
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventStartDate, setEventStartDate] = useState("");
-  const [eventEndDate, setEventEndDate] = useState("");
-  const [eventLevel, setEventLevel] = useState("Primary");
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loader, setLoader] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [weeks, setWeeks] = useState<any[]>([]);
-  const calendarRef = useRef<FullCalendar>(null);
-  const { isOpen, openModal, closeModal } = useModal();
-  const { user } = useUser();
+interface Batch {
+  id: string;
+  sponsor: Sponsor;
+}
 
-  const calendarsEvents = {
-    Danger: "danger",
-    Success: "success",
-    Primary: "primary",
-    Warning: "warning",
+interface Week {
+  week: number;
+  start_date: string;
+  end_date: string;
+  batches: Batch[];
+}
+
+const getWeekDetails = (weekNumber: number, year: number) => {
+  const firstDayOfYear = new Date(year, 0, 1);
+  const firstWeekOffset = (8 - firstDayOfYear.getDay()) % 7;
+  const date = new Date(year, 0, 1 + (weekNumber - 1) * 7 + firstWeekOffset);
+  const startDate = startOfWeek(date, { weekStartsOn: 1 });
+  const endDate = endOfWeek(date, { weekStartsOn: 1 });
+  return {
+    startDate: format(startDate, "yyyy/MM/dd"),
+    endDate: format(endDate, "yyyy/MM/dd"),
+  };
+};
+
+const Calendar: React.FC = () => {
+  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [showPastWeeks, setShowPastWeeks] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(getYear(new Date()));
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [selectedWeekStats, setSelectedWeekStats] = useState<Week | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedWeekForBooking, setSelectedWeekForBooking] = useState<Week | null>(null);
+  const [availableSponsors, setAvailableSponsors] = useState<Sponsor[]>([]);
+  const [selectedSponsor, setSelectedSponsor] = useState<string>("");
+  const [isConfirmingBooking, setIsConfirmingBooking] = useState(false);
+  const [mediaId, setMediaId] = useState<string>("");
+  const [bannerGotoUrl, setBannerGotoUrl] = useState("");
+  const [bannerImageUrl, setBannerImageUrl] = useState("");
+  const [bannerUrlError, setBannerUrlError] = useState("");
+  const [isCalendarLoading, setIsCalendarLoading] = useState(true);
+  const [isFetchingSponsors, setIsFetchingSponsors] = useState(false);
+  const [isBookingInProgress, setIsBookingInProgress] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [batchToCancel, setBatchToCancel] = useState<Batch | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const { user } = useUser();
+  const currentWeek = getISOWeek(new Date());
+  const currentYear = getYear(new Date());
+
+  const fetchCalendarData = async () => {
+    setIsCalendarLoading(true);
+    try {
+      const token = await getAccessToken();
+      const calendarRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/sponsor/calendar?year=${selectedYear}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const calendarData = await calendarRes.json();
+      
+      const allWeeks = Array.from({ length: 52 }, (_, i) => i + 1);
+      const apiWeeks = calendarData.weeks || [];
+      
+      const mergedWeeks = allWeeks.map(weekNumber => {
+        const foundWeek = apiWeeks.find((w: Week) => w.week === weekNumber);
+        const { startDate, endDate } = getWeekDetails(weekNumber, selectedYear);
+        if (foundWeek) {
+          return {
+            ...foundWeek,
+            start_date: startDate,
+            end_date: endDate,
+          };
+        }
+        return {
+          week: weekNumber,
+          start_date: startDate,
+          end_date: endDate,
+          batches: []
+        };
+      });
+
+      setWeeks(mergedWeeks);
+    } catch (err) {
+      console.error("Error fetching calendar data:", err);
+    } finally {
+      setIsCalendarLoading(false);
+    }
   };
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      setLoader(true);
-      setError(null);
+    const fetchInitialData = async () => {
       try {
         const token = await getAccessToken();
-        const res = await fetch(
-          process.env.NEXT_PUBLIC_API_URL +
-            "/api/media-admin/user/sponsor/calendar?year=2025&month=7",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        if (!res.ok) {
-          toast.error("Календарийн мэдээллийг татахад алдаа гарлаа.");
-          throw new Error("Календарийн мэдээллийг татахад алдаа гарлаа.");
-        }
-        const data = await res.json();
-        setWeeks(data.weeks || []);
-
-        const transformedEvents: CalendarEvent[] = [];
-        (data.weeks || []).forEach((week: any) => {
-          week.batches.forEach((batch: any) => {
-            transformedEvents.push({
-              id: batch.id,
-              title: batch.sponsor?.display_name || "No Sponsor",
-              start: batch.start_date,
-              end: batch.end_date,
-              allDay: true,
-              extendedProps: {
-                calendar: "Primary",
-              },
-            });
-          });
+        // Fetch Media ID
+        const mediaRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/media`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-        setEvents(transformedEvents);
-      } catch (err: any) {
-        const message =
-          err instanceof Error ? err.message : "An unknown error occurred";
-        toast.error(message);
-        console.error("Error fetching events:", message);
-      } finally {
-        setLoader(false);
+        const mediaData = await mediaRes.json();
+        if (mediaData && mediaData.length > 0) {
+          setMediaId(mediaData[0].id);
+        }
+
+        fetchCalendarData();
+      } catch (err) {
+        console.error("Error fetching initial data:", err);
       }
     };
 
-    if (user) fetchEvents();
-    else setLoader(false);
-  }, [user]);
+    if (user) fetchInitialData();
+  }, [user, selectedYear]);
 
-  const findWeekForDate = (dateStr: string) => {
-    const selectedDate = new Date(dateStr);
-    for (const week of weeks) {
-      const start = new Date(week.start_date);
-      const end = new Date(week.end_date);
-      if (selectedDate >= start && selectedDate <= end) {
-        return week;
-      }
-    }
-    return null;
+  const handleSeeStats = (week: Week) => {
+    setSelectedWeekStats(week);
+    setIsStatsModalOpen(true);
   };
 
-  const handleDateSelect = (selectInfo: DateSelectArg) => {
-    resetModalFields();
-    const week = findWeekForDate(selectInfo.startStr);
-
-    if (week) {
-      setEventStartDate(week.start_date.split("T")[0]);
-      setEventEndDate(week.end_date.split("T")[0]);
-    } else {
-      setEventStartDate(selectInfo.startStr);
-      setEventEndDate(selectInfo.endStr || selectInfo.startStr);
-    }
-
-    openModal();
-  };
-
-  const handleEventClick = (clickInfo: EventClickArg) => {
-    const event = clickInfo.event;
-    setSelectedEvent(event as unknown as CalendarEvent);
-    setEventTitle(event.title);
-    setEventStartDate(event.start?.toISOString().split("T")[0] || "");
-    setEventEndDate(event.end?.toISOString().split("T")[0] || "");
-    setEventLevel(event.extendedProps.calendar || "Primary");
-    openModal();
-  };
-
-  const handleAddOrUpdateEvent = () => {
-    if (selectedEvent) {
-      setEvents((prev) =>
-        prev.map((event) =>
-          event.id === selectedEvent.id
-            ? {
-                ...event,
-                title: eventTitle,
-                start: eventStartDate,
-                end: eventEndDate,
-                extendedProps: { calendar: eventLevel },
-              }
-            : event
-        )
+  const handleBookSponsorClick = async (week: Week) => {
+    setSelectedWeekForBooking(week);
+    setIsConfirmingBooking(false);
+    setBannerGotoUrl("");
+    setBannerImageUrl("");
+    setBannerUrlError("");
+    setIsFetchingSponsors(true);
+    setIsBookingModalOpen(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/sponsors?page=1&per_page=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-    } else {
-      const newEvent: CalendarEvent = {
-        id: Date.now().toString(),
-        title: eventTitle,
-        start: eventStartDate,
-        end: eventEndDate,
-        allDay: true,
-        extendedProps: { calendar: eventLevel },
-      };
-      setEvents((prev) => [...prev, newEvent]);
+      const data = await res.json();
+      setAvailableSponsors(data.sponsors || []);
+      if (data.sponsors?.length > 0) {
+        setSelectedSponsor(data.sponsors[0].id);
+      }
+    } catch (error) {
+      console.error("Error fetching sponsors:", error);
+    } finally {
+      setIsFetchingSponsors(false);
     }
-
-    closeModal();
-    resetModalFields();
   };
 
-  const resetModalFields = () => {
-    setEventTitle("");
-    setEventStartDate("");
-    setEventEndDate("");
-    setEventLevel("Primary");
-    setSelectedEvent(null);
+  const handleBookingSubmit = async () => {
+    if (bannerUrlError) return;
+    setIsBookingInProgress(true);
+    try {
+      const token = await getAccessToken();
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/sponsor/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          sponsor_id: selectedSponsor,
+          media_id: mediaId,
+          banner_goto_url: bannerGotoUrl,
+          banner_image_url: bannerImageUrl,
+          year: selectedYear,
+          week_of_year: selectedWeekForBooking?.week,
+        }),
+      });
+      setIsBookingModalOpen(false);
+      setIsConfirmingBooking(false);
+      await fetchCalendarData(); // Refresh calendar data
+    } catch (error) {
+      console.error("Error booking sponsor:", error);
+    } finally {
+      setIsBookingInProgress(false);
+    }
   };
+
+  const handleBannerUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setBannerGotoUrl(url);
+    if (url && !url.startsWith("https://")) {
+      setBannerUrlError("URL must start with https://");
+    } else {
+      setBannerUrlError("");
+    }
+  };
+
+  const handleCancelBookingClick = (batch: Batch) => {
+    setBatchToCancel(batch);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleCancelBookingSubmit = async () => {
+    if (!batchToCancel) return;
+    setIsCancelling(true);
+    try {
+      const token = await getAccessToken();
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/sponsor/batch/${batchToCancel.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setIsCancelModalOpen(false);
+      setBatchToCancel(null);
+      await fetchCalendarData();
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const filteredWeeks = showPastWeeks ? weeks : weeks.filter(week => selectedYear > currentYear || (selectedYear === currentYear && week.week >= currentWeek));
+
+  const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div className="custom-calendar">
-        {loader ? (
-          <div className="flex justify-center items-center py-20">
-            <svg
-              className="animate-spin h-8 w-8 text-blue-500 dark:text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              ></path>
-            </svg>
-          </div>
-        ) : error ? (
-          <div className="py-20 text-center text-red-500">
-            <p className="font-semibold">Алдаа гарлаа</p>
-            <p className="text-sm mt-1">{error}</p>
-          </div>
-        ) : (
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: "prev,next addEventButton",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay",
-            }}
-            events={events}
-            selectable={true}
-            select={handleDateSelect}
-            eventClick={handleEventClick}
-            eventContent={renderEventContent}
-            customButtons={{
-              addEventButton: {
-                text: "Add Event +",
-                click: openModal,
-              },
-            }}
-          />
-        )}
+    <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4">
+      <div className="mb-4 flex items-center gap-4">
+        <button 
+          onClick={() => setShowPastWeeks(!showPastWeeks)}
+          className="px-4 py-2 rounded-md bg-blue-500 text-white font-semibold"
+        >
+          {showPastWeeks ? "Hide Past Weeks" : "Show Past Weeks"}
+        </button>
+        <select 
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+          className="px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600"
+        >
+          {yearOptions.map(year => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
       </div>
+      {isCalendarLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredWeeks.map((week) => {
+            const isCurrentWeek = selectedYear === currentYear && week.week === currentWeek;
+            const isPastWeek = selectedYear < currentYear || (selectedYear === currentYear && week.week < currentWeek);
+            const isFutureWeek = selectedYear > currentYear || (selectedYear === currentYear && week.week > currentWeek);
 
-      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] p-6 lg:p-10">
-        <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
-          <h5 className="mb-2 font-semibold text-gray-800 dark:text-white/90 text-xl">
-            {selectedEvent ? "Edit Event" : "Add Event"}
-          </h5>
+            return (
+              <div 
+                key={week.week} 
+                className={`border rounded-lg p-4 relative flex flex-col justify-between ${
+                  isCurrentWeek 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50' 
+                    : isPastWeek 
+                    ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400' 
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}>
+                <div>
+                  {isCurrentWeek && (
+                    <span className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">Current Week</span>
+                  )}
+                  <h3 className={`font-bold text-lg mb-2 ${isCurrentWeek ? 'text-blue-600 dark:text-blue-300' : ''}`}>Week {week.week}</h3>
+                  <p className="text-sm mb-2">{week.start_date} - {week.end_date}</p>
+                  {week.batches.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {week.batches.map((batch) => (
+                        <div key={batch.sponsor.id} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-1">
+                          <img src={batch.sponsor.logo_url} alt={batch.sponsor.name} className="w-6 h-6 rounded-full" />
+                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{batch.sponsor.display_name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No sponsors</p>
+                  )}
+                </div>
+                <div className="mt-4">
+                  {(isPastWeek || isCurrentWeek) && week.batches.length > 0 && (
+                    <button onClick={() => handleSeeStats(week)} className="w-full px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white font-semibold">See Stats</button>
+                  )}
+                  {isFutureWeek && week.batches.length === 0 && (
+                    <button onClick={() => handleBookSponsorClick(week)} className="w-full px-4 py-2 rounded-md bg-green-500 text-white font-semibold">Book Sponsor</button>
+                  )}
+                  {isFutureWeek && week.batches.length > 0 && (
+                    <button onClick={() => handleCancelBookingClick(week.batches[0])} className="w-full px-4 py-2 rounded-md bg-red-500 text-white font-semibold">Cancel Booking</button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
-          <input
-            placeholder="Event Title"
-            value={eventTitle}
-            onChange={(e) => setEventTitle(e.target.value)}
-            className="input mt-4"
-          />
-
-          <div className="mt-4">
-            <label className="block text-sm">Event Color</label>
-            <div className="flex gap-4 mt-2">
-              {Object.entries(calendarsEvents).map(([key]) => (
-                <label key={key} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="event-color"
-                    value={key}
-                    checked={eventLevel === key}
-                    onChange={() => setEventLevel(key)}
-                  />
-                  {key}
-                </label>
-              ))}
+      {selectedWeekStats && (
+        <Modal isOpen={isStatsModalOpen} onClose={() => setIsStatsModalOpen(false)} className="max-w-[700px] p-6 lg:p-10">
+          <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
+            <h5 className="mb-4 font-semibold text-gray-800 dark:text-white/90 text-xl">
+              Statistics for Week {selectedWeekStats.week}
+            </h5>
+            {selectedWeekStats.batches.map(batch => (
+              <div key={batch.sponsor.id} className="mb-4">
+                <h6 className="font-semibold text-lg mb-2">{batch.sponsor.display_name}</h6>
+                {/* Placeholder for stats */}
+                <p>Impressions: 12,345</p>
+                <p>Clicks: 678</p>
+                <p>CTR: 5.5%</p>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-6 justify-end">
+              <button onClick={() => setIsStatsModalOpen(false)} className="btn-secondary">
+                Close
+              </button>
             </div>
           </div>
+        </Modal>
+      )}
 
-          <input
-            type="date"
-            value={eventStartDate}
-            onChange={(e) => setEventStartDate(e.target.value)}
-            className="input mt-4"
-          />
-
-          <input
-            type="date"
-            value={eventEndDate}
-            onChange={(e) => setEventEndDate(e.target.value)}
-            className="input mt-4"
-          />
-
-          <div className="flex gap-2 mt-6 justify-end">
-            <button onClick={closeModal} className="btn-secondary">
-              Close
-            </button>
-            <button onClick={handleAddOrUpdateEvent} className="btn-primary">
-              {selectedEvent ? "Update" : "Add"}
-            </button>
+      {selectedWeekForBooking && (
+        <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} className="max-w-[700px] p-6 lg:p-10">
+          <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
+            <h5 className="mb-4 font-semibold text-gray-800 dark:text-white/90 text-xl">
+              Book Sponsor for Week {selectedWeekForBooking.week}
+            </h5>
+            {isFetchingSponsors ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : !isConfirmingBooking ? (
+              <div>
+                <div className="mb-4">
+                  <label htmlFor="sponsor-select" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Select a sponsor</label>
+                  <select 
+                    id="sponsor-select"
+                    value={selectedSponsor}
+                    onChange={(e) => setSelectedSponsor(e.target.value)}
+                    className="w-full px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    {availableSponsors.map(sponsor => (
+                      <option key={sponsor.id} value={sponsor.id}>{sponsor.display_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="banner-goto-url" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Banner Go To URL</label>
+                  <input 
+                    id="banner-goto-url"
+                    type="text"
+                    value={bannerGotoUrl}
+                    onChange={handleBannerUrlChange}
+                    className={`w-full px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 ${bannerUrlError ? 'border-red-500' : ''}`}
+                    placeholder="https://example.com"
+                  />
+                  {bannerUrlError && <p className="text-red-500 text-xs mt-1">{bannerUrlError}</p>}
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="banner-image-url" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Banner Image URL</label>
+                  <input 
+                    id="banner-image-url"
+                    type="text"
+                    value={bannerImageUrl}
+                    onChange={(e) => setBannerImageUrl(e.target.value)}
+                    className="w-full px-4 py-2 rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600"
+                    placeholder="https://example.com/image.png"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Note: Direct file upload is not supported. Please provide a URL to the banner image.</p>
+                </div>
+                <div className="flex gap-2 mt-6 justify-end">
+                  <button onClick={() => setIsBookingModalOpen(false)} className="btn-secondary">
+                    Cancel
+                  </button>
+                  <button onClick={() => setIsConfirmingBooking(true)} className="btn-primary" disabled={!!bannerUrlError}>
+                    Book
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p>Are you sure you want to book <strong>{availableSponsors.find(s => s.id === selectedSponsor)?.display_name}</strong> for Week {selectedWeekForBooking.week}?</p>
+                <div className="flex gap-2 mt-6 justify-end">
+                  <button onClick={() => setIsConfirmingBooking(false)} className="btn-secondary" disabled={isBookingInProgress}>
+                    Cancel
+                  </button>
+                  <button onClick={handleBookingSubmit} className="btn-primary bg-green-500" disabled={isBookingInProgress}>
+                    {isBookingInProgress && <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>}
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      </Modal>
-    </div>
-  );
-};
+        </Modal>
+      )}
 
-const renderEventContent = (eventInfo: EventContentArg) => {
-  const colorClass = `fc-bg-${eventInfo.event.extendedProps.calendar?.toLowerCase()}`;
-  return (
-    <div className={`event-fc-color flex p-1 rounded-sm ${colorClass}`}>
-      <div className="fc-event-time">{eventInfo.timeText}</div>
-      <div className="fc-event-title">{eventInfo.event.title}</div>
+      {batchToCancel && (
+        <Modal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} className="max-w-[500px] p-6 lg:p-10">
+          <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
+            <h5 className="mb-4 font-semibold text-gray-800 dark:text-white/90 text-xl">
+              Cancel Booking
+            </h5>
+            <p>Are you sure you want to cancel the booking for <strong>{batchToCancel.sponsor.display_name}</strong>?</p>
+            <div className="flex gap-2 mt-6 justify-end">
+              <button onClick={() => setIsCancelModalOpen(false)} className="btn-secondary" disabled={isCancelling}>
+                Cancel
+              </button>
+              <button onClick={handleCancelBookingSubmit} className="btn-primary bg-red-500" disabled={isCancelling}>
+                {isCancelling && <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>}
+                Confirm
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
