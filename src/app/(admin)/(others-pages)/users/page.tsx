@@ -14,6 +14,7 @@ export default function BasicTables() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loader, setLoader] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [perPage, setPerPage] = useState(10);
 
   // Debounce search input
@@ -26,17 +27,26 @@ export default function BasicTables() {
   useEffect(() => {
     const fetchData = async () => {
       setLoader(true);
+      setError(null);
       try {
         const token = await getAccessToken();
         const url = `${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/user?email=${debouncedSearch}&page=${page}&per_page=${perPage}`;
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (!res.ok) {
+          throw new Error("Хэрэглэгчдийн мэдээллийг татахад алдаа гарлаа.");
+        }
+
         const data = await res.json();
         setTableData(data.users || []);
         setTotalPages(data.pagination?.pages || 1);
       } catch (err) {
-        console.error("Хэрэглэгчдийн мэдээллийг авахад алдаа гарлаа:", err);
+        const message =
+          err instanceof Error ? err.message : "An unknown error occurred";
+        setError(message);
+        console.error("Хэрэглэгчдийн мэдээллийг авахад алдаа гарлаа:", message);
       } finally {
         setLoader(false);
       }
@@ -114,7 +124,7 @@ export default function BasicTables() {
             </button>
           </div>
 
-          {/* Loader */}
+          {/* Loader, Error, or Table Content */}
           {loader ? (
             <div className="flex justify-center items-center py-12">
               <svg
@@ -137,6 +147,11 @@ export default function BasicTables() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
+            </div>
+          ) : error ? (
+            <div className="py-12 text-center text-red-500">
+              <p className="font-semibold">Алдаа гарлаа</p>
+              <p className="text-sm mt-1">{error}</p>
             </div>
           ) : (
             <>

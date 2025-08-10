@@ -21,10 +21,12 @@ export default function SponsorsTable() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loader, setLoader] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoader(true);
     const fetchData = async () => {
+      setLoader(true);
+      setError(null);
       try {
         const token = await getAccessToken();
         const res = await fetch(
@@ -35,11 +37,17 @@ export default function SponsorsTable() {
             },
           }
         );
+        if (!res.ok) {
+          throw new Error("Ивээн тэтгэгчдийн мэдээллийг татахад алдаа гарлаа.");
+        }
         const data = await res.json();
         setSponsorData(data.sponsors || []);
         setTotalPages(data.pagination?.pages || 1);
       } catch (err) {
-        console.error("Ивээн тэтгэгчдийн мэдээллийг авахад алдаа гарлаа:", err);
+        const message =
+          err instanceof Error ? err.message : "An unknown error occurred";
+        setError(message);
+        console.error("Ивээн тэтгэгчдийн мэдээллийг авахад алдаа гарлаа:", message);
       } finally {
         setLoader(false);
       }
@@ -69,7 +77,7 @@ export default function SponsorsTable() {
             />
           </div>
 
-          {/* Loader */}
+          {/* Loader, Error, or Table Content */}
           {loader ? (
             <div className="flex justify-center items-center py-12">
               <svg
@@ -92,6 +100,11 @@ export default function SponsorsTable() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 ></path>
               </svg>
+            </div>
+          ) : error ? (
+            <div className="py-12 text-center text-red-500">
+              <p className="font-semibold">Алдаа гарлаа</p>
+              <p className="text-sm mt-1">{error}</p>
             </div>
           ) : (
             <>
