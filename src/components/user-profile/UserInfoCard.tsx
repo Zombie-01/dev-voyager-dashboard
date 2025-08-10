@@ -2,10 +2,11 @@
 
 import React, { useState } from "react";
 import { getAccessToken } from "@auth0/nextjs-auth0";
-import Image from "next/image";
-import { InfoIcon, X, ArrowRight, RefreshCcw } from "lucide-react";
+import { InfoIcon, X, ArrowRight } from "lucide-react";
 import Label from "../form/Label";
 import Button from "../ui/button/Button";
+import MediaConfig from "./media";
+import PoliticalConfig from "./config";
 
 interface Media {
   id: string;
@@ -37,7 +38,6 @@ const DUMMY_USER = {
 
 const credit = "1,197,025₮";
 const sponsorLogo = "https://storage.googleapis.com/voyager-public/sponsor-assets/m-bank-logo.svg";
-const sponsorName = "Мэдлэг санхүүжүүлэгч";
 const sponsorUrl = "https://m-bank.mn/";
 
 export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
@@ -52,8 +52,8 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
     name: mediaData?.name || "",
   });
 
-  const [withUser, setWithUser] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [withUser, setWithUser] = useState<"default" | "chat" | "article">("default");
+   const [media, setMedia] = useState<"default" | "orientation" >("default");
 
   const related = [
     "Багш нарын тэтгэмжийн асуудал нь Монголын боловсролын салбарын үнэ цэнэ, нийгэмд үзүүлэх нөлөөний илэрхийлэл байж болох уу? Эсвэл энэ нь боловсролын салбарын үнэлэмжийн бууралтыг харуулж байна уу?",
@@ -61,165 +61,55 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
     "Багш нарын тэтгэмжийг хасах нь ирээдүйн боловсролын салбарт хэрхэн нөлөөлөх вэ? Энэ нь багш нарын урам зориг, ажлын чанарт хэрхэн тусах бол?",
   ];
 
-  const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const token = await getAccessToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media-admin/media`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error("Медиа шинэчлэхэд алдаа гарлаа");
-      // Optionally show success
-    } catch (err) {
-      // Optionally show error
-    } finally {
-      setLoading(false);
-    }
-  };
-
 
   return (
-    <div className="flex flex-row items-stretch gap-4">
-      {/* Left: Form */}
-      <div className="w-[340px] min-w-[320px] max-w-[360px]  rounded-2xl shadow-lg border  p-6 flex flex-col">
-        <h4 className="text-xl font-semibold text-black dark:text-whtie mb-6">Медиа мэдээлэл</h4>
-        {/* Toggle and Reset buttons */}
-        <div className="flex gap-2 mb-4">
+    <div className=" flex flex-col items-stretch gap-4">
+
+    <div className="w-full flex justify-between">    <div className="flex gap-2 justify-start mb-4">
           <button
-            className={`px-3 py-1 rounded-full text-sm font-medium border ${withUser ? "bg-yellow-400 text-black border-yellow-400" : "bg-white text-gray-700 border-gray-300"}`}
-            onClick={() => setWithUser(true)}
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${media === "default" ? "bg-yellow-400 text-black border-yellow-400" : "bg-white text-gray-700 border-gray-300"}`}
+            onClick={() => setMedia("default")}
+            type="button"
+          >
+            Үндсэн тохиргоо
+          </button>
+           <button
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${media === "orientation" ? "bg-yellow-400 text-black border-yellow-400" : "bg-white text-gray-700 border-gray-300"}`}
+            onClick={() => setMedia("orientation")}
+            type="button"
+          >
+            Агууллаггийн тохиргоо
+          </button>
+
+      </div>
+      {/* Left: Form */}
+        <div className="flex gap-2 justify-end mb-4">
+          <button
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${withUser === "chat" ? "bg-yellow-400 text-black border-yellow-400" : "bg-white text-gray-700 border-gray-300"}`}
+            onClick={() => setWithUser("chat")}
             type="button"
           >
             Чат хэсэг
           </button>
           <button
-            className={`px-3 py-1 rounded-full text-sm font-medium border ${!withUser ? "bg-yellow-400 text-black border-yellow-400" : "bg-white text-gray-700 border-gray-300"}`}
-            onClick={() => setWithUser(false)}
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${withUser === "default" ? "bg-yellow-400 text-black border-yellow-400" : "bg-white text-gray-700 border-gray-300"}`}
+            onClick={() => setWithUser("default")}
             type="button"
           >
             Үндсэн нүүр
           </button>
+           <button
+            className={`px-3 py-1 rounded-full text-sm font-medium border ${withUser === "article" ? "bg-yellow-400 text-black border-yellow-400" : "bg-white text-gray-700 border-gray-300"}`}
+            onClick={() => setWithUser("article")}
+            type="button"
+          >
+            Үндсэн нүүр (нийтлэлтэй)
+          </button>
        
         </div>
-        <form className="space-y-4 flex-1" onSubmit={e => e.preventDefault()}>
-          <div>
-            <Label>Медиа нэр</Label>
-            <input
-              type="text"
-              value={form.name}
-              placeholder="Медиа нэрээ оруулна уу"
-              onChange={(e) => handleChange("name", e.target.value)}
-              className="input border px-4 py-2 rounded-xl"
-            />
-          </div>
-          <div>
-            <Label>Ботын нэр</Label>
-            <input
-              type="text"
-              value={form.bot_name}
-              placeholder="Ботын нэр"
-              onChange={(e) => handleChange("bot_name", e.target.value)}
-              className="input border px-4 py-2 rounded-xl"
-            />
-          </div>
-          <div>
-            <Label>Ботын тодорхойлолт</Label>
-            <input
-              type="text"
-              value={form.bot_description}
-              placeholder="Ботын товч танилцуулга"
-              onChange={(e) => handleChange("bot_description", e.target.value)}
-              className="input border px-4 py-2 rounded-xl"
-            />
-          </div>
-          <div>
-            <Label>Медиа үндсэн URL</Label>
-            <input
-              type="text"
-              value={form.media_base_url}
-              placeholder="Жишээ: https://example.mn"
-              onChange={(e) => handleChange("media_base_url", e.target.value)}
-              className="input border px-4 py-2 rounded-xl"
-            />
-          </div>
-          <div>
-            <Label>Лого URL</Label>
-            <input
-              type="text"
-              value={form.logo_url}
-              placeholder="Логоны URL"
-              onChange={(e) => handleChange("logo_url", e.target.value)}
-              className="input border px-4 py-2 rounded-xl"
-            />
-          </div>
-          <div>
-            <Label>Брэнд өнгө</Label>
-            <input
-              type="color"
-              value={form.brand_color}
-              onChange={(e) => handleChange("brand_color", e.target.value)}
-              className="w-12 h-8 cursor-pointer rounded"
-              title={form.brand_color}
-            />
-          </div>
-          <div>
-            <Label>Текстийн өнгө</Label>
-            <input
-              type="color"
-              value={form.text_color}
-              onChange={(e) => handleChange("text_color", e.target.value)}
-              className="w-12 h-8 cursor-pointer rounded"
-              title={form.text_color}
-            />
-          </div>
-          <div>
-            <Label>Чатны өнгө</Label>
-            <input
-              type="color"
-              value={form.chat_color}
-              onChange={(e) => handleChange("chat_color", e.target.value)}
-              className="w-12 h-8 cursor-pointer rounded"
-              title={form.chat_color}
-            />
-          </div>
-        </form>
-        <div className="flex gap-4 mt-6">
-          <Button
-                size="sm" 
-                variant="outline"
-            onClick={() =>
-              setForm({
-                logo_url: mediaData?.logo_url || "",
-                brand_color: mediaData?.brand_color || "#000000",
-                chat_color: mediaData?.chat_color || "#ffffff",
-                text_color: mediaData?.text_color || "#000000",
-                bot_name: mediaData?.bot_name || "",
-                bot_description: mediaData?.bot_description || "",
-                media_base_url: mediaData?.media_base_url || "",
-                name: mediaData?.name || "",
-              })
-            }
-          >
-            Reset
-          </Button>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={loading}
-          >
-          {loading ? "..." : "Шинэчлэх"}
-        </Button>
-          </div>
       </div>
+     <div className="w-full flex gap-40 justify-between ">
+     {media === "orientation" ?<PoliticalConfig initialForm={{}}/> :<MediaConfig setForm={setForm} form={form} mediaData={mediaData}/> }
       {/* Right: Preview */}
       <div
         className="relative bottom-4 right-4 z-50 w-[95vw] max-w-[650px] h-[95vh] max-h-[800px] flex flex-col overflow-hidden rounded-[36px] shadow-2xl font-sans"
@@ -229,7 +119,7 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
       >
         {/* Top bar */}
         <div className="relative flex items-center justify-between px-4 py-2 min-h-[64px] gap-3">
-          {withUser ? (
+          {withUser === "chat" ? (
             <div style={{ color: form.text_color }} className="flex items-center gap-3">
               <button className="border-2 border-transparent rounded-full cursor-pointer w-9 h-9 overflow-hidden">
                 <img
@@ -269,8 +159,8 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
 
         {/* Main content */}
         <div className="flex-1 min-h-0 mx-4 mt-2 mb-0 bg-gray-100 rounded-[36px] shadow-lg flex flex-col overflow-auto px-4 py-4">
-          <Creditbar brand_color={form.brand_color} />
-          {withUser ? (
+          <Creditbar />
+          {withUser === "chat" ? (
             // ...existing chat-like content...
             <div className="flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-y-auto pt-6 pb-6 flex flex-col gap-4">
@@ -352,13 +242,8 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
                 </div>
               </div>
               {/* Input bar */}
-              <div className="flex bg-white rounded-2xl shadow border border-gray-200 flex-row items-center px-3 py-2 gap-2 mt-2">
-                <textarea rows={1} placeholder="Асуултаа бичнэ үү..." className="flex-1 text-[14px] outline-none border-none resize-none bg-transparent" />
-                <button className="refresh-btn bg-gray-100 text-black font-medium text-[14px] p-2 rounded-full hover:bg-gray-200 transition flex items-center justify-center">
-                  <RefreshCcw/></button>
-                <button style={{background: form.brand_color ,color: form.text_color}} className=" font-medium text-[14px] p-2 rounded-full flex items-center justify-center hover:bg-yellow-400 transition">
-                <ArrowRight/></button>
-              </div>
+
+
             </div>
           ) : (
             <>
@@ -374,18 +259,106 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
               <div className="w-full font-bold text-base text-gray-900 text-left mb-2 pl-2">Холбоотой</div>
               <div className="flex flex-col gap-3 w-full px-1">
                 {related.map((q, i) => (
-                  <button
-                    key={i}
-                    className="w-full flex items-center border-b border-gray-200 py-3 text-xs text-gray-800 font-medium gap-2 hover:bg-yellow-50 transition rounded"
-                  >
-                    <span className="flex items-center justify-center bg-black rounded w-4 h-4 mr-2">
-                    <ArrowRight style={{color: 'white'}}/>   </span>
-                    <span className="flex-1 text-left">{q}</span>
-                  </button>
+                   <button
+                   key={i}
+                      className="w-full relative bg-white border border-gray-900/5 rounded-[18px] flex items-center p-4 pl-[18px] gap-[14px] cursor-pointer outline-none shadow-sm shadow-black/5 transition-transform duration-200 ease-out hover:shadow-md animate-[fadeInUp_0.45s_ease-out]"
+                    >
+                      {/* Number circle */}
+                      <span className="inline-flex items-center justify-center w-7 min-w-[28px] h-7 rounded-[10px] bg-[#111] text-white text-[12px] font-extrabold">
+                        {i + 1}
+                      </span>
+
+                      {/* Text section */}
+                      <span className="flex flex-1 flex-col">
+                        <span className="text-slate-900 text-[13px] font-extrabold leading-[1.25] text-start">
+                         {q}
+                        </span>
+                        <span className="text-gray-500 text-[11px] mt-1 text-start">
+                          Сэдэв: Мэдээллийн хэрэглэх соёл
+                        </span>
+                      </span>
+
+                      {/* Arrow button */}
+                      <span
+                        data-arrow="1"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#111] shadow-lg shadow-black/20 translate-x-0 transition-transform duration-200"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#fff"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-arrow-right"
+                          aria-hidden="true"
+                        >
+                          <path d="M5 12h14"></path>
+                          <path d="m12 5 7 7-7 7"></path>
+                        </svg>
+                      </span>
+                    </button>
                 ))}
               </div>
             </>
           )}
+          <div className=" bottom-0 left-0 right-0 flex bg-white rounded-[16px] shadow-lg shadow-black/10 border border-gray-200 flex-row overflow-hidden items-center px-3 py-2.5 gap-2 m-2">
+          {/* Textarea */}
+          <textarea
+            rows={1}
+            placeholder="Асуултаа бичнэ үү..."
+            className="flex-1 text-[14px] outline-none border-none resize-none"
+          />
+
+          {/* Refresh Button */}
+          <button
+            className="refresh-btn bg-neutral-100 text-black font-medium text-[14px] p-2.5 border-none rounded-full cursor-pointer opacity-100 relative overflow-visible flex items-center justify-center group"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-refresh-ccw transform transition-transform duration-200 ease-in-out origin-center group-hover:rotate-45"
+              aria-hidden="true"
+            >
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 16h5v5"></path>
+            </svg>
+          </button>
+
+          {/* Send Button */}
+          <button
+            className="bg-[#FFE63D] text-black font-medium text-[14px] p-2.5 rounded-full cursor-pointer opacity-100 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-arrow-right"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
         </div>
             <div className="flex items-center justify-center text-xs py-3 text-gray-400 ">
               Powered by{" "}
@@ -406,11 +379,12 @@ export default function UserInfoCard({ mediaData }: { mediaData: Media }) {
     
   
       </div>
+      </div>
     </div>
   );
 }
 
-const Creditbar = ({ brand_color }: { brand_color: string }) => (
+const Creditbar = () => (
   <div className="flex items-center justify-between rounded-2xl h-[62px] px-6 bg-[#111] gap-4">
     <div className="flex flex-col flex-1 gap-1 max-w-[150px]">
       <div className="flex items-center justify-between text-white text-sm">
