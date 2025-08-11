@@ -30,7 +30,6 @@ steps:
       - "-h"
       - "Cache-Control:no-store"
       - "gs://$_BUCKET/**/*.html"
-      - "gs://$_BUCKET/index.html"
 
   - name: "gcr.io/cloud-builders/gcloud"
     entrypoint: bash
