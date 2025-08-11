@@ -1,17 +1,16 @@
 'use client';
 
 import GridShape from "@/components/common/GridShape";
-import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function ErrorPage() {
+function NotFoundInner() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
+  // Read but not directly used in UI; kept for parity
   const statusCode = searchParams.get("Request+failed+with+status+code");
-
 
   const message =
     errorDescription ||
@@ -39,10 +38,17 @@ export default function ErrorPage() {
         </Link>
       </div>
 
-      {/* Footer */}
       <p className="absolute text-sm text-center text-gray-500 -translate-x-1/2 bottom-6 left-1/2 dark:text-gray-400">
         &copy; {new Date().getFullYear()} - TailAdmin
       </p>
     </div>
+  );
+}
+
+export default function ErrorPage() {
+  return (
+    <Suspense>
+      <NotFoundInner />
+    </Suspense>
   );
 }

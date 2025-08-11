@@ -3,16 +3,14 @@
 import GridShape from "@/components/common/GridShape";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function ErrorPage() {
+function Error404Inner() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
   const statusCode = searchParams.get("statusCode");
-
-  console.log(error)
 
   const message =
     errorDescription ||
@@ -55,10 +53,17 @@ export default function ErrorPage() {
         </Link>
       </div>
 
-      {/* Footer */}
       <p className="absolute text-sm text-center text-gray-500 -translate-x-1/2 bottom-6 left-1/2 dark:text-gray-400">
         &copy; {new Date().getFullYear()} - TailAdmin
       </p>
     </div>
+  );
+}
+
+export default function ErrorPage() {
+  return (
+    <Suspense>
+      <Error404Inner />
+    </Suspense>
   );
 }

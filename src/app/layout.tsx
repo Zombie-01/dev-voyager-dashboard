@@ -1,14 +1,9 @@
-import { Outfit } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
 import { AuthProvider } from '@/context/Auth0Provider';
-
-const outfit = Outfit({
-  subsets: ["latin"],
-});
 
 export default function RootLayout({
   children,
@@ -17,7 +12,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning className={`${outfit.className} dark:bg-gray-900`}>
+      <body suppressHydrationWarning className={`dark:bg-gray-900`}>
         <ThemeProvider>
           <Toaster />
           <AuthProvider>

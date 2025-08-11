@@ -1,6 +1,6 @@
 import { getAccessToken } from "@auth0/nextjs-auth0";
 import Label from "../form/Label";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Button from "../ui/button/Button";
 
 interface Media {
@@ -26,24 +26,25 @@ interface Media {
 }
 interface MediaConfigProps {
   mediaData: Media; // Optional if you want, but you use it in Reset button
-  form: {
-    logo_url: string;
-    brand_color: string;
-    chat_color: string | null;
-    text_color: string;
-    bot_name: string;
-    bot_description: string;
-    media_base_url: string;
-    name: string;
-  };
-  setForm: React.Dispatch<React.SetStateAction<typeof form>>;
+  form: MediaForm;
+  setForm: React.Dispatch<React.SetStateAction<MediaForm>>;
 }
 
+type MediaForm = {
+  logo_url: string;
+  brand_color: string;
+  chat_color: string;
+  text_color: string;
+  bot_name: string;
+  bot_description: string;
+  media_base_url: string;
+  name: string;
+};
 
 export default function MediaConfig({ mediaData, setForm, form }: MediaConfigProps) {
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (field: keyof typeof form, value: string) => {
+  const handleChange = (field: keyof MediaForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 

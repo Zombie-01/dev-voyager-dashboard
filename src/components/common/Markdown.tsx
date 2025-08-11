@@ -47,7 +47,7 @@ function BlockRenderer({ text }: { text: string }) {
     const hm = line.match(hx);
     if (hm) {
       const level = hm[1].length as 1 | 2 | 3 | 4 | 5 | 6;
-      const Tag = (`h${level}` as unknown) as keyof JSX.IntrinsicElements;
+      const Tag = ("h" + level) as unknown as React.ElementType;
       const cls =
         level === 1
           ? "text-2xl font-semibold mt-3 mb-1"
@@ -98,7 +98,7 @@ function BlockRenderer({ text }: { text: string }) {
         if (m) items.push(m[1]);
         i++;
       }
-      const ListTag = (isOL ? "ol" : "ul") as keyof JSX.IntrinsicElements;
+      const ListTag = (isOL ? "ol" : "ul") as unknown as React.ElementType;
       out.push(
         <ListTag key={`list-${i}`} className="my-2 ml-5 list-outside list-disc dark:text-gray-100">
           {items.map((it, idx) => (
@@ -128,7 +128,7 @@ function BlockRenderer({ text }: { text: string }) {
 
 function renderInlineText(text: string): React.ReactNode {
   const nodes: React.ReactNode[] = [];
-  let remaining = text;
+  const remaining = text;
   const linkRegex = /\[([^\]]+)\]\((https?:[^)\s]+)\)/g;
   let last = 0;
   let match: RegExpExecArray | null;
@@ -211,15 +211,23 @@ function applyEmphasis(text: string): React.ReactNode {
   });
   return (
     <>
-      {result
-        .flatMap((node, i) =>
-          typeof node === "string"
-            ? node
-                .split("\n")
-                .flatMap((ln, j, arr) => [ln, j < arr.length - 1 ? <br key={`br-${i}-${j}`} /> : null])
-            : [node]
-        )
-        .filter(Boolean)}
+      {
+        (() => {
+          const interleaved: React.ReactNode[] = [];
+          result.forEach((node, i) => {
+            if (typeof node === "string") {
+              const lines = node.split("\n");
+              lines.forEach((ln, j) => {
+                interleaved.push(ln);
+                if (j < lines.length - 1) interleaved.push(<br key={`br-${i}-${j}`} />);
+              });
+            } else {
+              interleaved.push(node);
+            }
+          });
+          return interleaved;
+        })()
+      }
     </>
   );
 }
