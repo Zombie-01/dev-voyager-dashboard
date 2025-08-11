@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'export',
   images: {
+    unoptimized: true,
     domains: ["lh3.googleusercontent.com",'storage.googleapis.com'],
   },
   webpack(config) {

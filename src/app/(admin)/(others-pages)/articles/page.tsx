@@ -200,7 +200,6 @@ export default function ArticlesPage() {
                           <TableCell isHeader>Зохиогч</TableCell>
                           <TableCell isHeader>URL</TableCell>
                           <TableCell isHeader>Scraped</TableCell>
-                          <TableCell isHeader></TableCell>
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-100 dark:divide-white/10">

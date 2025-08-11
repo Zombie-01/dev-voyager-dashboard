@@ -1,0 +1,38 @@
+substitutions:
+  _BUCKET: "media-widget-admin-stg"
+  _URL_MAP: "widget-media-urlmap"
+steps:
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['ci']
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'export']
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['-m', 'rsync', '-r', '-d', 'out', 'gs://$_BUCKET']
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args:
+      - '-m'
+      - 'setmeta'
+      - '-h'
+      - 'Cache-Control:public,max-age=31536000,immutable'
+      - 'gs://$_BUCKET/_next/static/**'
+      - 'gs://$_BUCKET/assets/**'
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args:
+      - '-m'
+      - 'setmeta'
+      - '-h'
+      - 'Cache-Control:no-store'
+      - 'gs://$_BUCKET/**/*.html'
+      - 'gs://$_BUCKET/index.html'
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: bash
+    args:
+      - -lc
+      - |
+        if [[ -n "$_URL_MAP" ]]; then
+          gcloud compute url-maps invalidate-cdn-cache "$_URL_MAP" --path "/*";
+        else
+          echo "Skipping CDN invalidation";
+        fi
