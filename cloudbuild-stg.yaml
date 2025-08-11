@@ -36,3 +36,6 @@ steps:
         else
           echo "Skipping CDN invalidation";
         fi
+
+options:
+  logging: CLOUD_LOGGING_ONLY
