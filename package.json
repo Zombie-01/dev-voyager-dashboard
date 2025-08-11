@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next export",
-    "build:static": "npm run build && npm run export"
+    "build:static": "npm run build"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.8.0",

@@ -11,7 +11,6 @@ steps:
         node -v
         npm ci
         npm run build
-        npm run export
 
   - name: "gcr.io/cloud-builders/gsutil"
     args: ["-m", "rsync", "-r", "-d", "out", "gs://$_BUCKET"]
