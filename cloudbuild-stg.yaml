@@ -22,7 +22,6 @@ steps:
       - "-h"
       - "Cache-Control:public,max-age=31536000,immutable"
       - "gs://$_BUCKET/_next/static/**"
-      - "gs://$_BUCKET/assets/**"
 
   - name: "gcr.io/cloud-builders/gsutil"
     args:
