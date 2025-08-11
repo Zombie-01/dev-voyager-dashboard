@@ -11,7 +11,6 @@ export async function middleware(request: NextRequest) {
   if (auth0Response.status === 307 || auth0Response.status === 302) {
     return auth0Response;
   }
-
   // 2. Protect Routes
   const session = await auth0.getSession(request); // Use auth0Response to get session context
 
